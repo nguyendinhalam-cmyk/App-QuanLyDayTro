@@ -1,1 +1,309 @@
--- Đặt script tạo bảng/schema SQL Server hiện có của nhóm tại đây.
+USE master;
+GO
+IF DB_ID(N'QL_NHA_TRO') IS NULL
+BEGIN
+    EXEC(N'CREATE DATABASE QL_NHA_TRO');
+    PRINT N'Da tao database QL_NHA_TRO.';
+END
+ELSE
+BEGIN
+    PRINT N'Database QL_NHA_TRO da ton tai; khong thay doi du lieu.';
+END;
+GO
+
+USE QL_NHA_TRO;
+GO
+
+
+--Tạo bảng CHUTRO
+CREATE TABLE CHUTRO
+(
+    MaChuTro INT IDENTITY(1,1) PRIMARY KEY,
+    HoTen NVARCHAR(100) NOT NULL,
+    SoDienThoai VARCHAR(15) NOT NULL UNIQUE
+);
+GO
+
+--Tạo bảng DAYTRO
+CREATE TABLE DAYTRO
+(
+    MaDay INT IDENTITY(1,1) PRIMARY KEY,
+    TenDay NVARCHAR(100) NOT NULL,
+    DiaChi NVARCHAR(200) NOT NULL,
+    MaChuTro INT NOT NULL,
+
+    CONSTRAINT UQ_DAYTRO_DiaChi
+        UNIQUE (DiaChi),
+
+    CONSTRAINT FK_DAYTRO_CHUTRO
+        FOREIGN KEY (MaChuTro)
+        REFERENCES CHUTRO(MaChuTro)
+);
+GO
+
+--Tạo bảng PHONG
+CREATE TABLE PHONG
+(
+    MaPhong INT IDENTITY(1,1) PRIMARY KEY,
+    TenPhong VARCHAR(20) NOT NULL,
+    GiaThueHienTai DECIMAL(12,2) NOT NULL,
+    SoNguoiO INT NOT NULL DEFAULT 0,
+    TrangThai NVARCHAR(20) NOT NULL DEFAULT N'Trong',
+    MaDay INT NOT NULL,
+
+    CONSTRAINT UQ_PHONG_MaDay_TenPhong
+        UNIQUE (MaDay, TenPhong),
+
+    CONSTRAINT CK_PHONG_GiaThue
+        CHECK (GiaThueHienTai > 0),
+
+    CONSTRAINT CK_PHONG_SoNguoiO
+        CHECK (SoNguoiO BETWEEN 0 AND 3),
+
+    CONSTRAINT CK_PHONG_TrangThai
+        CHECK (TrangThai IN (N'Trong', N'DangThue', N'DangSua')),
+
+    CONSTRAINT FK_PHONG_DAYTRO
+        FOREIGN KEY (MaDay)
+        REFERENCES DAYTRO(MaDay)
+);
+GO
+
+--Tạo bảng NGUOITHUE
+CREATE TABLE NGUOITHUE
+(
+    MaNT INT IDENTITY(1,1) PRIMARY KEY,
+    HoTen NVARCHAR(100) NOT NULL,
+    CCCD VARCHAR(20) NOT NULL UNIQUE,
+    SoDienThoai VARCHAR(15) NOT NULL,
+    DiaChiThuongTru NVARCHAR(200) NULL
+);
+GO
+
+--Tạo bảng HOPDONG
+CREATE TABLE HOPDONG
+(
+    MaHopDong INT IDENTITY(1,1) PRIMARY KEY,
+    MaPhong INT NOT NULL,
+    MaNT INT NOT NULL,
+    NgayBatDau DATE NOT NULL,
+    NgayKetThuc DATE NOT NULL,
+    GiaThueThoaThuan DECIMAL(12,2) NOT NULL,
+    TienCoc DECIMAL(12,2) NOT NULL,
+    TrangThai NVARCHAR(20) NOT NULL DEFAULT N'HieuLuc',
+
+    CONSTRAINT CK_HOPDONG_Ngay
+        CHECK (NgayKetThuc > NgayBatDau),
+
+    CONSTRAINT CK_HOPDONG_GiaThue
+        CHECK (GiaThueThoaThuan > 0),
+
+    CONSTRAINT CK_HOPDONG_TienCoc
+        CHECK (TienCoc > 0),
+
+    CONSTRAINT CK_HOPDONG_TrangThai
+        CHECK (TrangThai IN (N'HieuLuc', N'DaDong')),
+
+    CONSTRAINT FK_HOPDONG_PHONG
+        FOREIGN KEY (MaPhong)
+        REFERENCES PHONG(MaPhong),
+
+    CONSTRAINT FK_HOPDONG_NGUOITHUE
+        FOREIGN KEY (MaNT)
+        REFERENCES NGUOITHUE(MaNT)
+);
+GO
+
+--Tạo bảng BANGGIADIEN
+CREATE TABLE BANGGIADIEN
+(
+    MaGiaDien INT IDENTITY(1,1) PRIMARY KEY,
+    DonGia DECIMAL(10,2) NOT NULL,
+    NgayApDung DATE NOT NULL,
+
+    CONSTRAINT CK_BANGGIADIEN_DonGia
+        CHECK (DonGia > 0),
+
+    CONSTRAINT UQ_BANGGIADIEN_NgayApDung
+        UNIQUE (NgayApDung)
+);
+GO
+
+--Tạo bảng BANGGIANUOC
+CREATE TABLE BANGGIANUOC
+(
+    MaGiaNuoc INT IDENTITY(1,1) PRIMARY KEY,
+    DonGia DECIMAL(10,2) NOT NULL,
+    NgayApDung DATE NOT NULL,
+
+    CONSTRAINT CK_BANGGIANUOC_DonGia
+        CHECK (DonGia > 0),
+
+    CONSTRAINT UQ_BANGGIANUOC_NgayApDung
+        UNIQUE (NgayApDung)
+);
+GO
+
+--Tạo bảng CHISODIEN
+CREATE TABLE CHISODIEN
+(
+    MaCSD INT IDENTITY(1,1) PRIMARY KEY,
+    MaPhong INT NOT NULL,
+    ThangNam VARCHAR(7) NOT NULL,
+    ChiSoCu INT NOT NULL,
+    ChiSoMoi INT NOT NULL,
+    NgayGhi DATE NOT NULL DEFAULT GETDATE(),
+
+    CONSTRAINT UQ_CHISODIEN_PHONG_THANG
+        UNIQUE (MaPhong, ThangNam),
+
+    CONSTRAINT CK_CHISODIEN_ThangNam
+        CHECK (TRY_CONVERT(DATE, '01/' + ThangNam, 103) IS NOT NULL),
+
+    CONSTRAINT CK_CHISODIEN_ChiSo
+        CHECK (ChiSoCu >= 0 AND ChiSoMoi >= ChiSoCu),
+
+    CONSTRAINT FK_CHISODIEN_PHONG
+        FOREIGN KEY (MaPhong)
+        REFERENCES PHONG(MaPhong)
+);
+GO
+
+--Tạo bảng CHISONUOC
+CREATE TABLE CHISONUOC
+(
+    MaCSN INT IDENTITY(1,1) PRIMARY KEY,
+    MaPhong INT NOT NULL,
+    ThangNam VARCHAR(7) NOT NULL,
+    ChiSoCu INT NOT NULL,
+    ChiSoMoi INT NOT NULL,
+    NgayGhi DATE NOT NULL DEFAULT GETDATE(),
+
+    CONSTRAINT UQ_CHISONUOC_PHONG_THANG
+        UNIQUE (MaPhong, ThangNam),
+
+    CONSTRAINT CK_CHISONUOC_ThangNam
+        CHECK (TRY_CONVERT(DATE, '01/' + ThangNam, 103) IS NOT NULL),
+
+    CONSTRAINT CK_CHISONUOC_ChiSo
+        CHECK (ChiSoCu >= 0 AND ChiSoMoi >= ChiSoCu),
+
+    CONSTRAINT FK_CHISONUOC_PHONG
+        FOREIGN KEY (MaPhong)
+        REFERENCES PHONG(MaPhong)
+);
+GO
+
+--Tạo bảng HOADON
+CREATE TABLE HOADON
+(
+    MaHoaDon INT IDENTITY(1,1) PRIMARY KEY,
+    MaHopDong INT NOT NULL,
+    ThangNam VARCHAR(7) NOT NULL,
+    TienPhong DECIMAL(12,2) NOT NULL,
+    TienDien DECIMAL(12,2) NOT NULL DEFAULT 0,
+    TienNuoc DECIMAL(12,2) NOT NULL DEFAULT 0,
+    TongTien DECIMAL(12,2) NOT NULL,
+    HanThanhToan DATE NOT NULL,
+    TrangThai NVARCHAR(20) NOT NULL DEFAULT N'ChuaThanhToan',
+
+    CONSTRAINT UQ_HOADON_HOPDONG_THANG
+        UNIQUE (MaHopDong, ThangNam),
+
+    CONSTRAINT CK_HOADON_ThangNam
+        CHECK (TRY_CONVERT(DATE, '01/' + ThangNam, 103) IS NOT NULL),
+
+    CONSTRAINT CK_HOADON_TienPhong
+        CHECK (TienPhong >= 0),
+
+    CONSTRAINT CK_HOADON_TienDien
+        CHECK (TienDien >= 0),
+
+    CONSTRAINT CK_HOADON_TienNuoc
+        CHECK (TienNuoc >= 0),
+
+    CONSTRAINT CK_HOADON_TongTien
+        CHECK (TongTien = TienPhong + TienDien + TienNuoc),
+
+    CONSTRAINT CK_HOADON_TrangThai
+        CHECK (TrangThai IN (N'ChuaThanhToan', N'DangThanhToan', N'HoanTat')),
+
+    CONSTRAINT FK_HOADON_HOPDONG
+        FOREIGN KEY (MaHopDong)
+        REFERENCES HOPDONG(MaHopDong)
+);
+GO
+
+--Tạo bảng THANHTOAN
+CREATE TABLE THANHTOAN
+(
+    MaThanhToan INT IDENTITY(1,1) PRIMARY KEY,
+    MaHoaDon INT NOT NULL,
+    NgayThanhToan DATETIME NOT NULL DEFAULT GETDATE(),
+    SoTienTra DECIMAL(12,2) NOT NULL,
+    GhiChu NVARCHAR(200) NULL,
+
+    CONSTRAINT CK_THANHTOAN_SoTien
+        CHECK (SoTienTra > 0),
+
+    CONSTRAINT FK_THANHTOAN_HOADON
+        FOREIGN KEY (MaHoaDon)
+        REFERENCES HOADON(MaHoaDon)
+);
+GO
+
+--Tạo bảng NHANVIEN
+CREATE TABLE NHANVIEN
+(
+    MaNV INT IDENTITY(1,1) PRIMARY KEY,
+    HoTen NVARCHAR(100) NOT NULL,
+    SoDienThoai VARCHAR(15) NOT NULL,
+    ChucVu NVARCHAR(50) NOT NULL
+);
+GO
+
+--Tạo bảng trung gian cho quan hệ N-N giữa NHANVIEN và DAYTRO
+CREATE TABLE NHANVIEN_DAYTRO
+(
+    MaNV INT NOT NULL,
+    MaDay INT NOT NULL,
+
+    CONSTRAINT PK_NHANVIEN_DAYTRO
+        PRIMARY KEY (MaNV, MaDay),
+
+    CONSTRAINT FK_NHANVIEN_DAYTRO_NHANVIEN
+        FOREIGN KEY (MaNV)
+        REFERENCES NHANVIEN(MaNV),
+
+    CONSTRAINT FK_NHANVIEN_DAYTRO_DAYTRO
+        FOREIGN KEY (MaDay)
+        REFERENCES DAYTRO(MaDay)
+);
+GO
+
+--Tạo bảng VAITRO
+CREATE TABLE VAITRO
+(
+    MaVaiTro INT IDENTITY(1,1) PRIMARY KEY,
+    TenVaiTro NVARCHAR(50) NOT NULL UNIQUE
+);
+GO
+
+--Tạo bảng TAIKHOAN
+CREATE TABLE TAIKHOAN
+(
+    MaTaiKhoan INT IDENTITY(1,1) PRIMARY KEY,
+    TenDangNhap VARCHAR(50) NOT NULL UNIQUE,
+    MatKhau VARCHAR(255) NOT NULL,
+    MaNV INT NOT NULL UNIQUE,
+    MaVaiTro INT NOT NULL,
+
+    CONSTRAINT FK_TAIKHOAN_NHANVIEN
+        FOREIGN KEY (MaNV)
+        REFERENCES NHANVIEN(MaNV),
+
+    CONSTRAINT FK_TAIKHOAN_VAITRO
+        FOREIGN KEY (MaVaiTro)
+        REFERENCES VAITRO(MaVaiTro)
+);
+GO
