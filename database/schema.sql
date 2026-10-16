@@ -1,0 +1,1 @@
+-- Đặt script tạo bảng/schema SQL Server hiện có của nhóm tại đây.

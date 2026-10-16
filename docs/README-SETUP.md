@@ -1,0 +1,1 @@
+# Hướng dẫn thiết lập\n1. Cài JDK 17, Maven và SQL Server Express.\n2. Mở project Maven trong IDE.\n3. Sao chép application.properties.example thành application.properties và cập nhật kết nối.\n4. Đưa các script SQL hiện có của nhóm vào database/; các file mẫu không tự tạo schema.\n5. Đối chiếu tên bảng/cột DAO với database thật trước khi chạy nghiệp vụ.\n

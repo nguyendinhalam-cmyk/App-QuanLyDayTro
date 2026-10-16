@@ -1,0 +1,1 @@
+-- Đặt script phân quyền; không lưu mật khẩu thật.

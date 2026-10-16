@@ -1,0 +1,1 @@
+-- Đặt script trigger hiện có tại đây.

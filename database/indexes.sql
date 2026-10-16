@@ -1,0 +1,1 @@
+-- Đặt script index hiện có tại đây.

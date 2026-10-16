@@ -1,0 +1,1 @@
+-- Đặt script PRIMARY KEY, FOREIGN KEY, CHECK, UNIQUE, DEFAULT tại đây.

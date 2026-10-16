@@ -1,0 +1,1 @@
+target/\n.idea/\n.vscode/\n*.iml\n*.class\n.env\nsrc/main/resources/application.properties\n

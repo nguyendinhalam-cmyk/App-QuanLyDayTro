@@ -1,0 +1,1 @@
+-- Đặt script function hiện có tại đây.

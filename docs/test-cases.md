@@ -1,0 +1,1 @@
+# Ca kiểm thử gợi ý\n- Đăng nhập đúng/sai.\n- Không cho thuê phòng đang có hợp đồng hiệu lực.\n- Chỉ số mới không nhỏ hơn chỉ số cũ.\n- Hóa đơn tính đúng theo giá áp dụng.\n- Tổng thanh toán không vượt tổng hóa đơn.\n- Thanh toán nhiều lần cập nhật đúng trạng thái.\n- Trả phòng/chuyển phòng rollback toàn bộ nếu có lỗi.\n- Kiểm tra quyền theo vai trò.\n
