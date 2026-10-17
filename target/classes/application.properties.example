@@ -1,0 +1,1 @@
+# Sao chép thành application.properties rồi sửa theo máy của bạn\ndb.url=jdbc:sqlserver://localhost\\SQLEXPRESS;databaseName=QuanLyDayTro;encrypt=true;trustServerCertificate=true\ndb.username=YOUR_SQL_USERNAME\ndb.password=YOUR_SQL_PASSWORD\n
