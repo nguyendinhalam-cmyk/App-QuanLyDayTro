@@ -177,8 +177,8 @@ GO
 INSERT INTO TAIKHOAN
 (TenDangNhap,MatKhau,MaNV,MaVaiTro)
 VALUES
-('admin', 'HASH_ADMIN', 1, 1),
-('manager', 'HASH_MANAGER', 2, 2),
-('staff1', 'HASH_STAFF1', 3, 3),
-('report', 'HASH_REPORT', 4, 4);
+('admin', 'PBKDF2$210000$FuIcJIITP48mmoLktVPPmg$HUYf0/Iw46n7yiDOLG+L6tJk0UpdwNV2XlsduefICRs', 1, 1),
+('manager', 'PBKDF2$210000$DV/oKVitCoPFWFOPxTCl/A$cO/cCFEJSw6YDzWA4Mfgs/WtsPxnAwJRNwjCVyWErHM', 2, 2),
+('staff1', 'PBKDF2$210000$4dkIa6WZy2+kQ9KsyzyBvw$YUpKC/+8Gz2L/bhKgdZgqejXkBVsCE7rR9s+3YVEKic', 3, 3),
+('report', 'PBKDF2$210000$xc6E2rIGD8AjtAyHDf60YA$A7rcq0gRIW39VJkAzOHdvqdy9vtA25gaMu9vmJ5hUT0', 4, 4);
 GO
