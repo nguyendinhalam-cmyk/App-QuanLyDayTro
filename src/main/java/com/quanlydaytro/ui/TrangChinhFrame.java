@@ -1,12 +1,17 @@
 package com.quanlydaytro.ui;
 
 import com.quanlydaytro.ui.quanlytaikhoan.NhanVienPanel;
+import com.quanlydaytro.ui.quanlydaytro.ChuTroPanel;
+import com.quanlydaytro.ui.quanlydaytro.DayTroPanel;
 import com.quanlydaytro.ui.quanlytaikhoan.TaiKhoanPanel;
 import com.quanlydaytro.util.QuanLyPhienDangNhap;
+
 import javax.swing.*;
 import java.awt.*;
 
-/** Khung chính; các chức năng quản trị được kiểm tra quyền trước khi mở. */
+/**
+ * Khung chính; các chức năng quản trị được kiểm tra quyền trước khi mở.
+ */
 public class TrangChinhFrame extends JFrame {
     private final JPanel noiDung = new JPanel(new BorderLayout());
 
@@ -34,6 +39,14 @@ public class TrangChinhFrame extends JFrame {
             JMenuItem nhanVien = new JMenuItem("Quản lý nhân viên");
             nhanVien.addActionListener(e -> hienThiNhanVien());
             heThong.add(nhanVien);
+        }
+        if (QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
+            JMenuItem chuTro = new JMenuItem("Quản lý chủ trọ");
+            chuTro.addActionListener(e -> hienThiChuTro());
+            heThong.add(chuTro);
+            JMenuItem dayTro = new JMenuItem("Quản lý dãy trọ");
+            dayTro.addActionListener(e -> hienThiDayTro());
+            heThong.add(dayTro);
         }
         JMenuItem trangChu = new JMenuItem("Trang chủ");
         trangChu.addActionListener(e -> hienThiTrangChu());
@@ -69,6 +82,28 @@ public class TrangChinhFrame extends JFrame {
         }
         noiDung.removeAll();
         noiDung.add(new TaiKhoanPanel(), BorderLayout.CENTER);
+        noiDung.revalidate();
+        noiDung.repaint();
+    }
+
+    private void hienThiChuTro() {
+        if (!QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
+            JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này.");
+            return;
+        }
+        noiDung.removeAll();
+        noiDung.add(new ChuTroPanel(), BorderLayout.CENTER);
+        noiDung.revalidate();
+        noiDung.repaint();
+    }
+
+    private void hienThiDayTro() {
+        if (!QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
+            JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này.");
+            return;
+        }
+        noiDung.removeAll();
+        noiDung.add(new DayTroPanel(), BorderLayout.CENTER);
         noiDung.revalidate();
         noiDung.repaint();
     }
