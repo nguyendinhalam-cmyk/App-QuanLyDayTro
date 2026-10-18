@@ -2,6 +2,7 @@ package com.quanlydaytro.ui.quanlyhoadon;
 
 import com.quanlydaytro.model.HoaDon;
 import com.quanlydaytro.service.HoaDonService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -16,35 +17,38 @@ import java.util.List;
  */
 public class HoaDonPanel extends JPanel {
     private final HoaDonService service = new HoaDonService();
-    private final JTextField txtTim = new JTextField(18);
+    private final JTextField txtTim = DialogUtils.createSearchField("Mã hóa đơn, hợp đồng, tháng, trạng thái...");
     private final DefaultTableModel model = new DefaultTableModel(new Object[]{"Mã HĐ", "Mã hợp đồng", "Tháng/năm", "Tiền phòng", "Tiền điện", "Tiền nước", "Tổng tiền", "Hạn thanh toán", "Trạng thái"}, 0) {
         @Override
         public boolean isCellEditable(int r, int c) {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
 
     public HoaDonPanel() {
         setLayout(new BorderLayout(8, 8));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        JLabel title = new JLabel("QUẢN LÝ HÓA ĐƠN", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
-        add(title, BorderLayout.NORTH);
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        top.add(new JLabel("Tìm mã hóa đơn / hợp đồng / tháng / trạng thái:"));
-        top.add(txtTim);
-        JButton btnTim = new JButton("Tìm kiếm"), btnTai = new JButton("Tải lại"), btnLap = new JButton("Lập hóa đơn tháng");
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        JPanel north = new JPanel(new BorderLayout(0, 10));
+        north.setOpaque(false);
+        north.add(DialogUtils.createHeaderPanel("📄 QUẢN LÝ HÓA ĐƠN TIỀN NHÀ", txtTim), BorderLayout.NORTH);
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        DialogUtils.styleToolbar(top);
+        JButton btnTim = DialogUtils.createStyledButton("Tìm kiếm", DialogUtils.PRIMARY), btnTai = DialogUtils.createStyledButton("Tải lại", DialogUtils.GRAY_BTN), btnLap = DialogUtils.createStyledButton("Lập hóa đơn tháng", DialogUtils.SUCCESS);
         top.add(btnTim);
         top.add(btnTai);
-        top.add(btnLap);
-        JPanel north = new JPanel(new BorderLayout());
-        north.add(title, BorderLayout.NORTH);
         north.add(top, BorderLayout.SOUTH);
         add(north, BorderLayout.NORTH);
         table.setAutoCreateRowSorter(true);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(DialogUtils.createCardBorder(null, null));
+        add(scroll, BorderLayout.CENTER);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        actions.setOpaque(false);
+        actions.add(btnLap);
+        add(actions, BorderLayout.SOUTH);
         btnTim.addActionListener(e -> taiDuLieu(true));
         btnTai.addActionListener(e -> taiDuLieu(false));
         txtTim.addActionListener(e -> taiDuLieu(true));

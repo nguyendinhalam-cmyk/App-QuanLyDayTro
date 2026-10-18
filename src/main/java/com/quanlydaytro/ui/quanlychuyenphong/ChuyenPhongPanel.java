@@ -1,6 +1,7 @@
 package com.quanlydaytro.ui.quanlychuyenphong;
 
 import com.quanlydaytro.service.ChuyenPhongService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -21,7 +22,7 @@ public class ChuyenPhongPanel extends JPanel {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
     private final JComboBox<PhongItem> cboPhongMoi = new JComboBox<>();
     private final JTextField txtNgay = new JTextField(LocalDate.now().toString(), 10);
     private final JTextField txtGia = new JTextField(12);
@@ -31,12 +32,12 @@ public class ChuyenPhongPanel extends JPanel {
 
     public ChuyenPhongPanel() {
         setLayout(new BorderLayout(10, 10));
+        setBackground(DialogUtils.BG_CONTENT);
         setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        JLabel title = new JLabel("QUẢN LÝ CHUYỂN PHÒNG");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
         JPanel header = new JPanel(new BorderLayout());
-        header.add(title, BorderLayout.WEST);
-        JButton btnTaiLai = new JButton("Tải lại");
+        header.setOpaque(false);
+        header.add(DialogUtils.createHeaderPanel("⇄ QUẢN LÝ CHUYỂN PHÒNG", null), BorderLayout.CENTER);
+        JButton btnTaiLai = DialogUtils.createStyledButton("Tải lại", DialogUtils.GRAY_BTN);
         btnTaiLai.addActionListener(e -> taiDuLieu());
         header.add(btnTaiLai, BorderLayout.EAST);
         add(header, BorderLayout.NORTH);
@@ -46,9 +47,12 @@ public class ChuyenPhongPanel extends JPanel {
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) capNhatThongTinHopDong();
         });
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(DialogUtils.createCardBorder(null, null));
+        add(scroll, BorderLayout.CENTER);
         JPanel form = new JPanel(new GridBagLayout());
-        form.setBorder(BorderFactory.createTitledBorder("Thông tin chuyển phòng"));
+        form.setBackground(Color.WHITE);
+        form.setBorder(BorderFactory.createCompoundBorder(DialogUtils.createCardBorder("Thông tin chuyển phòng", DialogUtils.PRIMARY), BorderFactory.createEmptyBorder(10, 14, 10, 14)));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(5, 6, 5, 6);
         g.anchor = GridBagConstraints.WEST;
@@ -62,11 +66,12 @@ public class ChuyenPhongPanel extends JPanel {
         them(form, g, 1, 2, txtGia);
         them(form, g, 2, 2, new JLabel("Tiền cọc mới:"));
         them(form, g, 3, 2, txtCoc);
-        JButton btnChuyen = new JButton("Xác nhận chuyển phòng");
+        JButton btnChuyen = DialogUtils.createStyledButton("Xác nhận chuyển phòng", DialogUtils.SUCCESS);
         btnChuyen.addActionListener(e -> thucHienChuyenPhong());
-        JButton btnPhong = new JButton("Tải phòng trống");
+        JButton btnPhong = DialogUtils.createStyledButton("Tải phòng trống", DialogUtils.PRIMARY);
         btnPhong.addActionListener(e -> taiPhongTrong());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        actions.setOpaque(false);
         actions.add(btnPhong);
         actions.add(btnChuyen);
         g.gridx = 0;

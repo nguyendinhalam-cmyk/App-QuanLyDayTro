@@ -7,14 +7,20 @@ import com.quanlydaytro.model.HopDong;
 import com.quanlydaytro.model.NguoiThue;
 import com.quanlydaytro.model.Phong;
 import com.quanlydaytro.service.HopDongService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
+import java.text.NumberFormat;
 
 /**
  * Giao diện quản lý hợp đồng: lập, cập nhật, kết thúc, tìm kiếm và tra cứu lịch sử.
@@ -27,84 +33,136 @@ public class HopDongPanel extends JPanel {
     private final JComboBox<NguoiThue> cboNguoiThue = new JComboBox<>();
     private final JTextField txtBatDau = new JTextField("2026-10-01", 10);
     private final JTextField txtKetThuc = new JTextField("2027-10-01", 10);
-    private final JTextField txtGia = new JTextField(10), txtCoc = new JTextField(10), txtTim = new JTextField(15);
+    private final JTextField txtGia = new JTextField(10), txtCoc = new JTextField(10);
+    private final JTextField txtTim;
     private final JComboBox<TrangThaiHopDong> cboTrangThai = new JComboBox<>(TrangThaiHopDong.values());
-    private final DefaultTableModel model = new DefaultTableModel(new Object[]{"Mã HĐ", "Mã phòng", "Tên phòng", "Mã người thuê", "Họ tên", "Ngày bắt đầu", "Ngày kết thúc", "Giá thuê", "Tiền cọc", "Trạng thái"}, 0) {
+    private final JTextField txtMaHD = new JTextField(10);
+    private final JComboBox<String> cboLocTrangThai = new JComboBox<>(new String[]{"Tất cả", "Đang hiệu lực", "Đã đóng"});
+    private final DefaultTableModel model = new DefaultTableModel(new Object[]{"STT", "Mã HĐ", "Phòng", "Người thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền cọc", "Giá thuê/tháng", "Trạng thái", "__MaHopDong", "__MaPhong", "__MaNguoiThue"}, 0) {
         @Override
         public boolean isCellEditable(int r, int c) {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = DialogUtils.createStyledTable(model);
+    private final TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
     private int maDangChon;
 
     public HopDongPanel() {
-        setLayout(new BorderLayout(8, 8));
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        JLabel title = new JLabel("QUẢN LÝ HỢP ĐỒNG THUÊ");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
-        add(title, BorderLayout.NORTH);
-        JPanel form = new JPanel(new GridBagLayout());
-        GridBagConstraints g = new GridBagConstraints();
-        g.insets = new Insets(4, 5, 4, 5);
-        g.anchor = GridBagConstraints.WEST;
-        addField(form, g, 0, 0, "Phòng:", cboPhong);
-        addField(form, g, 2, 0, "Người thuê:", cboNguoiThue);
-        addField(form, g, 0, 1, "Ngày bắt đầu (yyyy-MM-dd):", txtBatDau);
-        addField(form, g, 2, 1, "Ngày kết thúc (yyyy-MM-dd):", txtKetThuc);
-        addField(form, g, 0, 2, "Giá thuê thỏa thuận:", txtGia);
-        addField(form, g, 2, 2, "Tiền cọc:", txtCoc);
-        addField(form, g, 0, 3, "Trạng thái:", cboTrangThai);
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton them = new JButton("Lập hợp đồng"), sua = new JButton("Cập nhật"), dong = new JButton("Kết thúc hợp đồng"), xoa = new JButton("Xóa"), moi = new JButton("Làm mới");
-        buttons.add(them);
-        buttons.add(sua);
-        buttons.add(dong);
-        buttons.add(xoa);
-        buttons.add(moi);
-        JPanel search = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        search.add(new JLabel("Tìm mã HĐ, phòng hoặc người thuê:"));
-        search.add(txtTim);
-        JButton tim = new JButton("Tìm kiếm"), tatCa = new JButton("Tất cả");
-        search.add(tim);
-        search.add(tatCa);
-        JPanel north = new JPanel(new BorderLayout());
-        north.add(form, BorderLayout.NORTH);
-        north.add(buttons, BorderLayout.CENTER);
-        north.add(search, BorderLayout.SOUTH);
+        setLayout(new BorderLayout(0, 14));
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        txtTim = DialogUtils.createSearchField("Tìm hợp đồng, phòng, người thuê...");
+        txtMaHD.setEditable(false);
+        txtMaHD.setBackground(new Color(241, 245, 249));
+
+        JPanel header = new JPanel(new BorderLayout(0, 10));
+        header.setOpaque(false);
+        header.add(DialogUtils.createHeaderPanel("QUẢN LÝ HỢP ĐỒNG THUÊ PHÒNG", txtTim), BorderLayout.NORTH);
+        JPanel filter = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
+        DialogUtils.styleToolbar(filter);
+        filter.add(DialogUtils.createFormLabel("Lọc theo trạng thái:"));
+        filter.add(cboLocTrangThai);
+        JButton applyFilter = DialogUtils.createStyledButton("Lọc hợp đồng", DialogUtils.PRIMARY);
+        filter.add(applyFilter);
+        header.add(filter, BorderLayout.SOUTH);
+        add(header, BorderLayout.NORTH);
+
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setAutoCreateRowSorter(true);
-        JPanel body = new JPanel(new BorderLayout(8, 8));
-        body.add(north, BorderLayout.NORTH);
-        body.add(new JScrollPane(table), BorderLayout.CENTER);
+        table.setRowSorter(sorter);
+        for (int i = model.getColumnCount() - 1; i >= 9; i--) table.removeColumn(table.getColumnModel().getColumn(i));
+        table.setFillsViewportHeight(true);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setBorder(DialogUtils.createCardBorder(null, null));
+        tableScroll.getViewport().setBackground(Color.WHITE);
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(tableScroll, BorderLayout.CENTER);
+        body.add(createDetailsCard(), BorderLayout.SOUTH);
         add(body, BorderLayout.CENTER);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        actions.setOpaque(false);
+        JButton them = DialogUtils.createStyledButton("Lập hợp đồng", DialogUtils.SUCCESS);
+        JButton sua = DialogUtils.createStyledButton("Cập nhật", DialogUtils.WARNING);
+        JButton dong = DialogUtils.createStyledButton("Kết thúc", DialogUtils.DANGER);
+        JButton xoa = DialogUtils.createStyledButton("Xóa", DialogUtils.DANGER);
+        JButton moi = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN);
+        actions.add(them); actions.add(sua); actions.add(dong); actions.add(xoa); actions.add(moi);
+        add(actions, BorderLayout.SOUTH);
         them.addActionListener(e -> luu(false));
         sua.addActionListener(e -> luu(true));
         dong.addActionListener(e -> ketThuc());
         xoa.addActionListener(e -> xoa());
         moi.addActionListener(e -> lamMoi());
-        tim.addActionListener(e -> napDanhSach(txtTim.getText()));
-        tatCa.addActionListener(e -> {
-            txtTim.setText("");
-            napDanhSach("");
+        applyFilter.addActionListener(e -> applyFilter());
+        cboLocTrangThai.addActionListener(e -> applyFilter());
+        cboTrangThai.setRenderer(new DefaultListCellRenderer() {
+            @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus) {
+                super.getListCellRendererComponent(list, value, index, selected, focus);
+                if (value == TrangThaiHopDong.HIEU_LUC) setText("Đang hiệu lực");
+                else if (value == TrangThaiHopDong.DA_DONG) setText("Đã đóng");
+                return this;
+            }
+        });
+        txtTim.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { applyFilter(); }
+            public void removeUpdate(DocumentEvent e) { applyFilter(); }
+            public void changedUpdate(DocumentEvent e) { applyFilter(); }
         });
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && table.getSelectedRow() >= 0) chonDong();
         });
+        txtBatDau.setText(LocalDate.now().toString());
+        txtKetThuc.setText(LocalDate.now().plusYears(1).toString());
         napCombobox();
         napDanhSach("");
     }
 
-    private void addField(JPanel p, GridBagConstraints g, int x, int y, String label, Component c) {
-        g.gridx = x;
-        g.gridy = y;
-        g.weightx = 0;
-        g.fill = GridBagConstraints.NONE;
-        p.add(new JLabel(label), g);
-        g.gridx = x + 1;
-        g.weightx = 1;
+    private JPanel createDetailsCard() {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(DialogUtils.createCardBorder("Chi tiết hợp đồng thuê", DialogUtils.PRIMARY), BorderFactory.createEmptyBorder(8, 14, 12, 14)));
+        JPanel fields = new JPanel(new GridBagLayout());
+        fields.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(5, 8, 5, 12);
         g.fill = GridBagConstraints.HORIZONTAL;
-        p.add(c, g);
+        addField(fields, g, 0, 0, "Mã hợp đồng:", txtMaHD);
+        addField(fields, g, 2, 0, "Phòng thuê:", cboPhong);
+        addField(fields, g, 0, 1, "Người thuê:", cboNguoiThue);
+        addField(fields, g, 2, 1, "Ngày bắt đầu (yyyy-MM-dd):", txtBatDau);
+        addField(fields, g, 0, 2, "Ngày kết thúc:", txtKetThuc);
+        addField(fields, g, 2, 2, "Tiền đặt cọc (VNĐ):", txtCoc);
+        addField(fields, g, 0, 3, "Giá thuê/tháng (VNĐ):", txtGia);
+        addField(fields, g, 2, 3, "Trạng thái:", cboTrangThai);
+        Dimension size = new Dimension(220, 36);
+        for (JComponent field : new JComponent[]{txtMaHD, txtBatDau, txtKetThuc, txtGia, txtCoc, cboPhong, cboNguoiThue, cboTrangThai}) field.setPreferredSize(size);
+        card.add(fields, BorderLayout.CENTER);
+        return card;
+    }
+
+    private void addField(JPanel p, GridBagConstraints base, int x, int y, String label, Component component) {
+        GridBagConstraints g = (GridBagConstraints) base.clone();
+        g.gridx = x; g.gridy = y; g.weightx = 0;
+        p.add(DialogUtils.createFormLabel(label), g);
+        g.gridx = x + 1; g.weightx = 1;
+        p.add(component, g);
+    }
+
+    private void applyFilter() {
+        String keyword = txtTim.getText().trim();
+        String status = String.valueOf(cboLocTrangThai.getSelectedItem());
+        sorter.setRowFilter(new RowFilter<>() {
+            @Override public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                boolean textMatch = keyword.isEmpty() || entry.getStringValue(1).toLowerCase().contains(keyword.toLowerCase())
+                        || entry.getStringValue(2).toLowerCase().contains(keyword.toLowerCase())
+                        || entry.getStringValue(3).toLowerCase().contains(keyword.toLowerCase())
+                        || entry.getStringValue(0).toLowerCase().contains(keyword.toLowerCase());
+                boolean statusMatch = status.equals("Tất cả") || entry.getStringValue(8).equals(status);
+                return textMatch && statusMatch;
+            }
+        });
     }
 
     private void napCombobox() {
@@ -117,8 +175,14 @@ public class HopDongPanel extends JPanel {
                 @Override
                 public Component getListCellRendererComponent(JList<?> l, Object v, int i, boolean s, boolean f) {
                     super.getListCellRendererComponent(l, v, i, s, f);
-                    if (v instanceof Phong p)
-                        setText("Phòng " + p.getMaPhong() + " - " + p.getTenPhong() + " (" + p.getTrangThai() + ")");
+                    if (v instanceof Phong p) {
+                        String status = switch (p.getTrangThai()) {
+                            case TRONG -> "Trống";
+                            case DANG_THUE -> "Đang thuê";
+                            case DANG_SUA -> "Đang sửa";
+                        };
+                        setText("Phòng " + p.getMaPhong() + " - " + p.getTenPhong() + " (" + status + ")");
+                    }
                     return this;
                 }
             });
@@ -141,12 +205,18 @@ public class HopDongPanel extends JPanel {
             List<Object[]> rows = service.layDanhSachKemTen();
             model.setRowCount(0);
             String k = key == null ? "" : key.trim().toLowerCase();
+            int stt = 1;
             for (Object[] row : rows) {
                 HopDong h = (HopDong) row[0];
                 String tenPhong = (String) row[1], hoTen = (String) row[2];
                 String all = h.getMaHopDong() + " " + h.getMaPhong() + " " + tenPhong + " " + h.getMaNguoiThue() + " " + hoTen + " " + h.getTrangThai();
+                String status = h.getTrangThai() == TrangThaiHopDong.HIEU_LUC ? "Đang hiệu lực" : "Đã đóng";
                 if (k.isEmpty() || all.toLowerCase().contains(k))
-                    model.addRow(new Object[]{h.getMaHopDong(), h.getMaPhong(), tenPhong, h.getMaNguoiThue(), hoTen, h.getNgayBatDau(), h.getNgayKetThuc(), h.getGiaThueThoaThuan(), h.getTienCoc(), h.getTrangThai() == TrangThaiHopDong.HIEU_LUC ? "Hiệu lực" : "Đã đóng"});
+                    model.addRow(new Object[]{stt++, String.format(Locale.ROOT, "HD%06d", h.getMaHopDong()), tenPhong, hoTen,
+                            h.getNgayBatDau() == null ? "" : h.getNgayBatDau().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                            h.getNgayKetThuc() == null ? "" : h.getNgayKetThuc().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                            formatMoney(h.getTienCoc()), formatMoney(h.getGiaThueThoaThuan()), status,
+                            h.getMaHopDong(), h.getMaPhong(), h.getMaNguoiThue()});
             }
         } catch (Exception ex) {
             baoLoi("Không tải được danh sách hợp đồng: " + ex.getMessage());
@@ -196,12 +266,13 @@ public class HopDongPanel extends JPanel {
 
     private void chonDong() {
         int r = table.convertRowIndexToModel(table.getSelectedRow());
-        maDangChon = (int) model.getValueAt(r, 0);
+        maDangChon = ((Number) model.getValueAt(r, 9)).intValue();
         try {
             HopDong h = service.timTheoMa(maDangChon).orElse(null);
             if (h == null) return;
             chonPhong(h.getMaPhong());
             chonNguoiThue(h.getMaNguoiThue());
+            txtMaHD.setText(String.format(Locale.ROOT, "HD%06d", h.getMaHopDong()));
             txtBatDau.setText(h.getNgayBatDau().toString());
             txtKetThuc.setText(h.getNgayKetThuc().toString());
             txtGia.setText(h.getGiaThueThoaThuan().toPlainString());
@@ -261,6 +332,9 @@ public class HopDongPanel extends JPanel {
 
     private void lamMoi() {
         maDangChon = 0;
+        txtMaHD.setText("");
+        txtTim.setText("");
+        cboLocTrangThai.setSelectedItem("Tất cả");
         table.clearSelection();
         txtBatDau.setText(LocalDate.now().toString());
         txtKetThuc.setText(LocalDate.now().plusYears(1).toString());
@@ -269,6 +343,10 @@ public class HopDongPanel extends JPanel {
         cboTrangThai.setSelectedItem(TrangThaiHopDong.HIEU_LUC);
         napCombobox();
         napDanhSach("");
+    }
+
+    private String formatMoney(BigDecimal value) {
+        return value == null ? "" : NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN")).format(value) + " VNĐ";
     }
 
     private void baoLoi(String msg) {

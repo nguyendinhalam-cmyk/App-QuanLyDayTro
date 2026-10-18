@@ -2,6 +2,7 @@ package com.quanlydaytro.ui.quanlyhoadon;
 
 import com.quanlydaytro.model.ThanhToan;
 import com.quanlydaytro.service.ThanhToanService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -21,17 +22,25 @@ public class ThanhToanPanel extends JPanel {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
 
     public ThanhToanPanel() {
         setLayout(new BorderLayout(8, 8));
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton refresh = new JButton("Làm mới công nợ"), pay = new JButton("Ghi nhận thanh toán"), history = new JButton("Lịch sử thanh toán");
-        top.add(refresh);
-        top.add(pay);
-        top.add(history);
-        add(top, BorderLayout.NORTH);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        add(DialogUtils.createHeaderPanel("💳 THANH TOÁN & CÔNG NỢ", null), BorderLayout.NORTH);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setAutoCreateRowSorter(true);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(DialogUtils.createCardBorder(null, null));
+        add(scroll, BorderLayout.CENTER);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        actions.setOpaque(false);
+        JButton refresh = DialogUtils.createStyledButton("Làm mới công nợ", DialogUtils.GRAY_BTN), pay = DialogUtils.createStyledButton("Ghi nhận thanh toán", DialogUtils.SUCCESS), history = DialogUtils.createStyledButton("Lịch sử thanh toán", DialogUtils.PRIMARY);
+        actions.add(refresh);
+        actions.add(pay);
+        actions.add(history);
+        add(actions, BorderLayout.SOUTH);
         refresh.addActionListener(e -> taiDuLieu());
         pay.addActionListener(e -> ghiNhan());
         history.addActionListener(e -> xemLichSu());
@@ -89,7 +98,7 @@ public class ThanhToanPanel extends JPanel {
             DateTimeFormatter f = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             for (ThanhToan t : list)
                 m.addRow(new Object[]{t.getMaThanhToan(), t.getMaHoaDon(), t.getNgayThanhToan() == null ? "" : t.getNgayThanhToan().format(f), t.getSoTienTra(), t.getGhiChu()});
-            JTable t = new JTable(m);
+            JTable t = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(m);
             JOptionPane.showMessageDialog(this, new JScrollPane(t), "Lịch sử thanh toán", JOptionPane.PLAIN_MESSAGE);
         } catch (Exception ex) {
             baoLoi(ex);
