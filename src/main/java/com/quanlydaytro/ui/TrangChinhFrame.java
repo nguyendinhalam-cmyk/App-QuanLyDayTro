@@ -9,6 +9,9 @@ import com.quanlydaytro.ui.quanlydiennuoc.ChiSoPanel;
 import com.quanlydaytro.ui.quanlyhoadon.HoaDonPanel;
 import com.quanlydaytro.ui.quanlyhoadon.ThanhToanPanel;
 import com.quanlydaytro.ui.quanlytraphong.TraPhongPanel;
+import com.quanlydaytro.ui.quanlychuyenphong.ChuyenPhongPanel;
+import com.quanlydaytro.ui.tracuu.TraCuuPanel;
+import com.quanlydaytro.ui.thongke.BaoCaoPanel;
 import com.quanlydaytro.ui.quanlytaikhoan.TaiKhoanPanel;
 import com.quanlydaytro.util.QuanLyPhienDangNhap;
 
@@ -72,6 +75,15 @@ public class TrangChinhFrame extends JFrame {
             JMenuItem traPhong = new JMenuItem("Quản lý trả phòng và quyết toán tiền cọc");
             traPhong.addActionListener(e -> hienThiTraPhong());
             heThong.add(traPhong);
+            JMenuItem chuyenPhong = new JMenuItem("Quản lý chuyển phòng");
+            chuyenPhong.addActionListener(e -> hienThiChuyenPhong());
+            heThong.add(chuyenPhong);
+            JMenuItem traCuu = new JMenuItem("Tra cứu thông tin");
+            traCuu.addActionListener(e -> hienThiTraCuu());
+            heThong.add(traCuu);
+            JMenuItem baoCao = new JMenuItem("Thống kê và báo cáo");
+            baoCao.addActionListener(e -> hienThiBaoCao());
+            heThong.add(baoCao);
         }
         JMenuItem trangChu = new JMenuItem("Trang chủ");
         trangChu.addActionListener(e -> hienThiTrangChu());
@@ -199,6 +211,39 @@ public class TrangChinhFrame extends JFrame {
         noiDung.repaint();
     }
 
+    private void hienThiChuyenPhong() {
+        if (!QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
+            JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này.");
+            return;
+        }
+        noiDung.removeAll();
+        noiDung.add(new ChuyenPhongPanel(), BorderLayout.CENTER);
+        noiDung.revalidate();
+        noiDung.repaint();
+    }
+
+    private void hienThiTraCuu() {
+        if (!QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
+            JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này.");
+            return;
+        }
+        noiDung.removeAll();
+        noiDung.add(new TraCuuPanel(), BorderLayout.CENTER);
+        noiDung.revalidate();
+        noiDung.repaint();
+    }
+
+    private void hienThiBaoCao() {
+        if (!QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
+            JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này.");
+            return;
+        }
+        noiDung.removeAll();
+        noiDung.add(new BaoCaoPanel(), BorderLayout.CENTER);
+        noiDung.revalidate();
+        noiDung.repaint();
+    }
+
     private void hienThiTraPhong() {
         if (!QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
             JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này.");
@@ -210,3 +255,4 @@ public class TrangChinhFrame extends JFrame {
         noiDung.repaint();
     }
 }
+
