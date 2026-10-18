@@ -1,5 +1,17 @@
 package com.quanlydaytro.service;
-/** Xử lý nghiệp vụ ChiSo; bổ sung quy tắc và gọi DAO tại đây. */
+
+/**
+ * Facade cho nghiệp vụ ghi chỉ số điện và nước.
+ */
 public class ChiSoService {
- // TODO: triển khai nghiệp vụ.
+    private final ChiSoDienService dien = new ChiSoDienService();
+    private final ChiSoNuocService nuoc = new ChiSoNuocService();
+
+    public ChiSoDienService getDienService() {
+        return dien;
+    }
+
+    public ChiSoNuocService getNuocService() {
+        return nuoc;
+    }
 }
