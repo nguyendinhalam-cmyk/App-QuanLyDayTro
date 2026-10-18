@@ -2,6 +2,7 @@ package com.quanlydaytro.ui.quanlynguoithue;
 
 import com.quanlydaytro.model.NguoiThue;
 import com.quanlydaytro.service.NguoiThueService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -14,7 +15,12 @@ import java.sql.SQLException;
  */
 public class NguoiThuePanel extends JPanel {
     private final NguoiThueService service = new NguoiThueService();
-    private final JTextField txtTimKiem = new JTextField(24);
+    private final JTextField txtTimKiem = DialogUtils.createSearchField("Tìm theo mã, họ tên, CCCD, điện thoại, địa chỉ...");
+    private final JTextField txtHoTen = DialogUtils.createFormField();
+    private final JTextField txtCCCD = DialogUtils.createFormField();
+    private final JTextField txtSDT = DialogUtils.createFormField();
+    private final JTextField txtDiaChi = DialogUtils.createFormField();
+    private int maDangChon;
     private final DefaultTableModel model = new DefaultTableModel(
             new Object[]{"Mã người thuê", "Họ tên", "CCCD", "Số điện thoại", "Địa chỉ thường trú"}, 0) {
         @Override
@@ -22,54 +28,67 @@ public class NguoiThuePanel extends JPanel {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
 
     public NguoiThuePanel() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(14, 14, 14, 14));
-        JLabel title = new JLabel("QUẢN LÝ NGƯỜI THUÊ", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 19f));
-        add(title, BorderLayout.NORTH);
-
-        JPanel content = new JPanel(new BorderLayout(8, 8));
-        JPanel search = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        search.add(new JLabel("Tìm theo mã, họ tên, CCCD, số điện thoại hoặc địa chỉ:"));
-        search.add(txtTimKiem);
-        JButton btnTim = new JButton("Tìm kiếm"), btnBoLoc = new JButton("Bỏ lọc");
-        search.add(btnTim);
-        search.add(btnBoLoc);
-        content.add(search, BorderLayout.NORTH);
-
+        setLayout(new BorderLayout(0, 14));
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(new EmptyBorder(8, 8, 8, 8));
+        add(DialogUtils.createHeaderPanel("QUẢN LÝ NGƯỜI THUÊ", txtTimKiem), BorderLayout.NORTH);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setRowHeight(26);
         table.setAutoCreateRowSorter(true);
         table.setFillsViewportHeight(true);
-        content.add(new JScrollPane(table), BorderLayout.CENTER);
-        add(content, BorderLayout.CENTER);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setBorder(DialogUtils.createCardBorder(null, null));
+        tableScroll.getViewport().setBackground(Color.WHITE);
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(tableScroll, BorderLayout.CENTER);
+        body.add(createDetailsCard(), BorderLayout.SOUTH);
+        add(body, BorderLayout.CENTER);
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnThem = new JButton("Thêm người thuê"), btnSua = new JButton("Sửa thông tin"),
-                btnXoa = new JButton("Xóa người thuê"), btnTaiLai = new JButton("Làm mới");
-        buttons.add(btnThem);
-        buttons.add(btnSua);
-        buttons.add(btnXoa);
-        buttons.add(btnTaiLai);
-        add(buttons, BorderLayout.SOUTH);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        actions.setOpaque(false);
+        JButton btnThem = DialogUtils.createStyledButton("Thêm mới", DialogUtils.SUCCESS);
+        JButton btnSua = DialogUtils.createStyledButton("Cập nhật", DialogUtils.WARNING);
+        JButton btnXoa = DialogUtils.createStyledButton("Xóa", DialogUtils.DANGER);
+        JButton btnTaiLai = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN);
+        actions.add(btnThem); actions.add(btnSua); actions.add(btnXoa); actions.add(btnTaiLai);
+        add(actions, BorderLayout.SOUTH);
 
-        btnTim.addActionListener(e -> taiDuLieu(txtTimKiem.getText()));
         txtTimKiem.addActionListener(e -> taiDuLieu(txtTimKiem.getText()));
-        btnBoLoc.addActionListener(e -> {
-            txtTimKiem.setText("");
-            taiDuLieu("");
-        });
-        btnThem.addActionListener(e -> hienThiForm(null));
+        btnThem.addActionListener(e -> luu(false));
         btnSua.addActionListener(e -> sua());
         btnXoa.addActionListener(e -> xoa());
         btnTaiLai.addActionListener(e -> {
             txtTimKiem.setText("");
+            clearForm();
             taiDuLieu("");
         });
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && table.getSelectedRow() >= 0) loadSelection();
+        });
         taiDuLieu("");
+    }
+
+    private JPanel createDetailsCard() {
+        JPanel card = new JPanel(new GridBagLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(DialogUtils.createCardBorder("Thông tin người thuê", DialogUtils.PRIMARY), BorderFactory.createEmptyBorder(8, 16, 12, 16)));
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(5, 8, 5, 12); g.fill = GridBagConstraints.HORIZONTAL;
+        addField(card, g, 0, 0, "Họ và tên:", txtHoTen);
+        addField(card, g, 2, 0, "CCCD:", txtCCCD);
+        addField(card, g, 0, 1, "Số điện thoại:", txtSDT);
+        addField(card, g, 2, 1, "Địa chỉ thường trú:", txtDiaChi);
+        for (JTextField field : new JTextField[]{txtHoTen, txtCCCD, txtSDT, txtDiaChi}) field.setPreferredSize(new Dimension(230, 36));
+        return card;
+    }
+
+    private void addField(JPanel panel, GridBagConstraints base, int x, int y, String label, JComponent field) {
+        GridBagConstraints g = (GridBagConstraints) base.clone();
+        g.gridx = x; g.gridy = y; g.weightx = 0; panel.add(DialogUtils.createFormLabel(label), g);
+        g.gridx = x + 1; g.weightx = 1; panel.add(field, g);
     }
 
     private void taiDuLieu(String tuKhoa) {
@@ -91,40 +110,51 @@ public class NguoiThuePanel extends JPanel {
             return;
         }
         int row = table.convertRowIndexToModel(viewRow);
-        NguoiThue nt = new NguoiThue(((Number) model.getValueAt(row, 0)).intValue(),
-                String.valueOf(model.getValueAt(row, 1)), String.valueOf(model.getValueAt(row, 2)),
-                String.valueOf(model.getValueAt(row, 3)), String.valueOf(model.getValueAt(row, 4)));
-        hienThiForm(nt);
+        maDangChon = ((Number) model.getValueAt(row, 0)).intValue();
+        luu(true);
     }
 
-    private void hienThiForm(NguoiThue duLieu) {
-        boolean sua = duLieu != null;
-        JTextField hoTen = new JTextField(sua ? duLieu.getHoTen() : "", 22);
-        JTextField cccd = new JTextField(sua ? duLieu.getCCCD() : "", 22);
-        JTextField sdt = new JTextField(sua ? duLieu.getSoDienThoai() : "", 22);
-        JTextField diaChi = new JTextField(sua && duLieu.getDiaChiThuongTru() != null ? duLieu.getDiaChiThuongTru() : "", 22);
-        JPanel form = new JPanel(new GridLayout(0, 2, 8, 9));
-        form.add(new JLabel("Họ và tên (*):"));
-        form.add(hoTen);
-        form.add(new JLabel("CCCD (9 hoặc 12 số) (*):"));
-        form.add(cccd);
-        form.add(new JLabel("Số điện thoại (*):"));
-        form.add(sdt);
-        form.add(new JLabel("Địa chỉ thường trú:"));
-        form.add(diaChi);
-        int result = JOptionPane.showConfirmDialog(this, form, sua ? "Cập nhật người thuê" : "Thêm người thuê",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result != JOptionPane.OK_OPTION) return;
-        NguoiThue nt = new NguoiThue(sua ? duLieu.getMaNguoiThue() : 0,
-                hoTen.getText(), cccd.getText(), sdt.getText(), diaChi.getText());
+    private void luu(boolean sua) {
+        int ma = maDangChon;
+        NguoiThue nt = new NguoiThue(sua ? ma : 0, txtHoTen.getText(), txtCCCD.getText(), txtSDT.getText(), txtDiaChi.getText());
         try {
-            if (sua) service.capNhat(duLieu.getMaNguoiThue(), nt);
+            if (sua) {
+                if (ma <= 0) { thongBao("Vui lòng chọn người thuê cần cập nhật."); return; }
+                service.capNhat(ma, nt);
+            }
             else service.them(nt);
             thongBao(sua ? "Cập nhật người thuê thành công." : "Thêm người thuê thành công.");
             taiDuLieu(txtTimKiem.getText());
+            if (sua) chonDong(ma); else clearForm();
         } catch (Exception ex) {
             baoLoi("Không thể lưu thông tin người thuê", ex);
         }
+    }
+
+    private void loadSelection() {
+        int view = table.getSelectedRow();
+        if (view < 0) return;
+        int row = table.convertRowIndexToModel(view);
+        maDangChon = ((Number) model.getValueAt(row, 0)).intValue();
+        txtHoTen.setText(String.valueOf(model.getValueAt(row, 1)));
+        txtCCCD.setText(String.valueOf(model.getValueAt(row, 2)));
+        txtSDT.setText(String.valueOf(model.getValueAt(row, 3)));
+        txtDiaChi.setText(String.valueOf(model.getValueAt(row, 4)));
+    }
+
+    private void chonDong(int ma) {
+        for (int row = 0; row < model.getRowCount(); row++) {
+            if (((Number) model.getValueAt(row, 0)).intValue() == ma) {
+                int view = table.convertRowIndexToView(row);
+                if (view >= 0) table.setRowSelectionInterval(view, view);
+                return;
+            }
+        }
+    }
+
+    private void clearForm() {
+        maDangChon = 0;
+        txtHoTen.setText(""); txtCCCD.setText(""); txtSDT.setText(""); txtDiaChi.setText("");
     }
 
     private void xoa() {
@@ -143,6 +173,9 @@ public class NguoiThuePanel extends JPanel {
         try {
             if (service.xoa(ma)) thongBao("Đã xóa người thuê.");
             else thongBao("Người thuê không còn tồn tại.");
+            maDangChon = 0;
+            table.clearSelection();
+            clearForm();
             taiDuLieu(txtTimKiem.getText());
         } catch (Exception ex) {
             baoLoi("Không thể xóa người thuê", ex);

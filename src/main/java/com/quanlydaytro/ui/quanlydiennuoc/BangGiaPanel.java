@@ -5,6 +5,7 @@ import com.quanlydaytro.model.GiaNuoc;
 import com.quanlydaytro.service.BangGiaService;
 import com.quanlydaytro.service.GiaDienService;
 import com.quanlydaytro.service.GiaNuocService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,17 +23,16 @@ public class BangGiaPanel extends JPanel {
     private final BangGiaService service = new BangGiaService();
     private final DefaultTableModel dienModel = modelBang();
     private final DefaultTableModel nuocModel = modelBang();
-    private final JTable dienTable = new JTable(dienModel);
-    private final JTable nuocTable = new JTable(nuocModel);
-    private final JTextField dienSearch = new JTextField(18);
-    private final JTextField nuocSearch = new JTextField(18);
+    private final JTable dienTable = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(dienModel);
+    private final JTable nuocTable = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(nuocModel);
+    private final JTextField dienSearch = DialogUtils.createSearchField("Tìm theo mã, đơn giá hoặc ngày...");
+    private final JTextField nuocSearch = DialogUtils.createSearchField("Tìm theo mã, đơn giá hoặc ngày...");
 
     public BangGiaPanel() {
         setLayout(new BorderLayout(8, 8));
-        setBorder(new EmptyBorder(14, 14, 14, 14));
-        JLabel title = new JLabel("QUẢN LÝ GIÁ ĐIỆN, NƯỚC", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 19f));
-        add(title, BorderLayout.NORTH);
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(new EmptyBorder(15, 15, 15, 15));
+        add(DialogUtils.createHeaderPanel("⚡ QUẢN LÝ ĐƠN GIÁ ĐIỆN & NƯỚC", null), BorderLayout.NORTH);
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Giá điện", taoTab(true));
         tabs.addTab("Giá nước", taoTab(false));
@@ -52,11 +52,13 @@ public class BangGiaPanel extends JPanel {
 
     private JPanel taoTab(boolean laDien) {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
-        JPanel tim = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setBackground(DialogUtils.BG_CONTENT);
+        JPanel tim = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
+        DialogUtils.styleToolbar(tim);
         JTextField search = laDien ? dienSearch : nuocSearch;
         tim.add(new JLabel("Tìm theo mã, đơn giá hoặc ngày (yyyy-MM-dd):"));
         tim.add(search);
-        JButton btnTim = new JButton("Tìm kiếm"), btnBoLoc = new JButton("Bỏ lọc");
+        JButton btnTim = DialogUtils.createStyledButton("Tìm kiếm", DialogUtils.PRIMARY), btnBoLoc = DialogUtils.createStyledButton("Bỏ lọc", DialogUtils.GRAY_BTN);
         tim.add(btnTim);
         tim.add(btnBoLoc);
         panel.add(tim, BorderLayout.NORTH);
@@ -66,8 +68,9 @@ public class BangGiaPanel extends JPanel {
         table.setAutoCreateRowSorter(true);
         table.setFillsViewportHeight(true);
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton them = new JButton("Thêm đơn giá"), sua = new JButton("Sửa đơn giá"), xoa = new JButton("Xóa đơn giá"), taiLai = new JButton("Làm mới");
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        actions.setOpaque(false);
+        JButton them = DialogUtils.createStyledButton("Thêm đơn giá", DialogUtils.SUCCESS), sua = DialogUtils.createStyledButton("Sửa đơn giá", DialogUtils.WARNING), xoa = DialogUtils.createStyledButton("Xóa đơn giá", DialogUtils.DANGER), taiLai = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN);
         actions.add(them);
         actions.add(sua);
         actions.add(xoa);

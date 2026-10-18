@@ -2,6 +2,7 @@ package com.quanlydaytro.ui.quanlytaikhoan;
 
 import com.quanlydaytro.model.NhanVien;
 import com.quanlydaytro.service.NhanVienService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -14,7 +15,7 @@ import java.sql.SQLException;
  */
 public class NhanVienPanel extends JPanel {
     private final NhanVienService service = new NhanVienService();
-    private final JTextField txtTimKiem = new JTextField(24);
+    private final JTextField txtTimKiem = DialogUtils.createSearchField("Mã, họ tên, điện thoại, chức vụ...");
     private final DefaultTableModel tableModel = new DefaultTableModel(
             new Object[]{"Mã nhân viên", "Họ và tên", "Số điện thoại", "Chức vụ"}, 0) {
         @Override
@@ -22,21 +23,20 @@ public class NhanVienPanel extends JPanel {
             return false;
         }
     };
-    private final JTable table = new JTable(tableModel);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(tableModel);
 
     public NhanVienPanel() {
         setLayout(new BorderLayout(10, 10));
+        setBackground(DialogUtils.BG_CONTENT);
         setBorder(new EmptyBorder(14, 14, 14, 14));
 
-        JLabel title = new JLabel("QUẢN LÝ NHÂN VIÊN", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
         JPanel north = new JPanel(new BorderLayout(8, 10));
-        north.add(title, BorderLayout.NORTH);
-        JPanel search = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        search.add(new JLabel("Tìm kiếm (mã, họ tên, điện thoại, chức vụ):"));
-        search.add(txtTimKiem);
-        JButton btnTim = new JButton("Tìm kiếm");
-        JButton btnLamMoi = new JButton("Làm mới");
+        north.setOpaque(false);
+        north.add(DialogUtils.createHeaderPanel("👥 QUẢN LÝ NHÂN VIÊN", txtTimKiem), BorderLayout.NORTH);
+        JPanel search = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        DialogUtils.styleToolbar(search);
+        JButton btnTim = DialogUtils.createStyledButton("Tìm kiếm", DialogUtils.PRIMARY);
+        JButton btnLamMoi = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN);
         search.add(btnTim);
         search.add(btnLamMoi);
         north.add(search, BorderLayout.SOUTH);
@@ -46,12 +46,15 @@ public class NhanVienPanel extends JPanel {
         table.setRowHeight(26);
         table.setAutoCreateRowSorter(true);
         table.setFillsViewportHeight(true);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(DialogUtils.createCardBorder(null, null));
+        add(scroll, BorderLayout.CENTER);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnThem = new JButton("Thêm nhân viên");
-        JButton btnSua = new JButton("Sửa thông tin");
-        JButton btnXoa = new JButton("Xóa nhân viên");
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        actions.setOpaque(false);
+        JButton btnThem = DialogUtils.createStyledButton("Thêm nhân viên", DialogUtils.SUCCESS);
+        JButton btnSua = DialogUtils.createStyledButton("Sửa thông tin", DialogUtils.WARNING);
+        JButton btnXoa = DialogUtils.createStyledButton("Xóa nhân viên", DialogUtils.DANGER);
         actions.add(btnThem);
         actions.add(btnSua);
         actions.add(btnXoa);

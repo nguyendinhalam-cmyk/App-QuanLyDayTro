@@ -1,6 +1,7 @@
 package com.quanlydaytro.ui.quanlytraphong;
 
 import com.quanlydaytro.service.TraPhongService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -21,19 +22,22 @@ public class TraPhongPanel extends JPanel {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
     private final NumberFormat money = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
     public TraPhongPanel() {
         setLayout(new BorderLayout(8, 8));
-        JLabel title = new JLabel("QUẢN LÝ TRẢ PHÒNG VÀ QUYẾT TOÁN TIỀN CỌC", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
-        add(title, BorderLayout.NORTH);
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        add(DialogUtils.createHeaderPanel("🔑 QUẢN LÝ TRẢ PHÒNG & QUYẾT TOÁN CỌC", null), BorderLayout.NORTH);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
-        add(new JScrollPane(table), BorderLayout.CENTER);
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton refresh = new JButton("Làm mới"), settle = new JButton("Quyết toán trả phòng");
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(DialogUtils.createCardBorder(null, null));
+        add(scroll, BorderLayout.CENTER);
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        buttons.setOpaque(false);
+        JButton refresh = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN), settle = DialogUtils.createStyledButton("Quyết toán trả phòng", DialogUtils.SUCCESS);
         refresh.addActionListener(e -> taiDuLieu());
         settle.addActionListener(e -> quyetToan());
         buttons.add(refresh);

@@ -4,6 +4,7 @@ import com.quanlydaytro.dao.ChuTroDAO;
 import com.quanlydaytro.model.ChuTro;
 import com.quanlydaytro.model.DayTro;
 import com.quanlydaytro.service.DayTroService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -16,74 +17,45 @@ import java.util.List;
 public class DayTroPanel extends JPanel {
     private final DayTroService service = new DayTroService();
     private final JComboBox<ChuTro> cboChuTro = new JComboBox<>();
-    private final JTextField txtTen = new JTextField(18), txtDiaChi = new JTextField(28), txtTim = new JTextField(18);
+    private final JTextField txtTen = DialogUtils.createFormField(), txtDiaChi = DialogUtils.createFormField();
+    private final JTextField txtTim = DialogUtils.createSearchField("Tìm theo mã, tên dãy, địa chỉ, chủ trọ...");
     private final DefaultTableModel model = new DefaultTableModel(new Object[]{"Mã dãy", "Tên dãy", "Địa chỉ", "Mã chủ trọ", "Tên chủ trọ"}, 0) {
         public boolean isCellEditable(int r, int c) {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
     private int maDangChon = 0;
 
     public DayTroPanel() {
-        setLayout(new BorderLayout(8, 8));
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        JLabel title = new JLabel("QUẢN LÝ DÃY TRỌ");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
-        add(title, BorderLayout.NORTH);
-        JPanel form = new JPanel(new GridBagLayout());
-        GridBagConstraints g = new GridBagConstraints();
-        g.insets = new Insets(4, 5, 4, 5);
-        g.anchor = GridBagConstraints.WEST;
-        g.gridx = 0;
-        g.gridy = 0;
-        form.add(new JLabel("Tên dãy:"), g);
-        g.gridx = 1;
-        form.add(txtTen, g);
-        g.gridx = 2;
-        form.add(new JLabel("Địa chỉ:"), g);
-        g.gridx = 3;
-        form.add(txtDiaChi, g);
-        g.gridx = 0;
-        g.gridy = 1;
-        form.add(new JLabel("Chủ trọ:"), g);
-        g.gridx = 1;
-        g.gridwidth = 3;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        form.add(cboChuTro, g);
-        g.gridwidth = 1;
-        g.fill = GridBagConstraints.NONE;
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton them = new JButton("Thêm"), sua = new JButton("Cập nhật"), xoa = new JButton("Xóa"), moi = new JButton("Làm mới");
-        buttons.add(them);
-        buttons.add(sua);
-        buttons.add(xoa);
-        buttons.add(moi);
-        JPanel search = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        search.add(new JLabel("Tìm theo mã, tên dãy, địa chỉ, chủ trọ:"));
-        search.add(txtTim);
-        JButton tim = new JButton("Tìm kiếm"), tatCa = new JButton("Tất cả");
-        search.add(tim);
-        search.add(tatCa);
-        JPanel north = new JPanel(new BorderLayout());
-        north.add(form, BorderLayout.NORTH);
-        north.add(buttons, BorderLayout.CENTER);
-        north.add(search, BorderLayout.SOUTH);
+        setLayout(new BorderLayout(0, 14));
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        add(DialogUtils.createHeaderPanel("QUẢN LÝ DÃY TRỌ", txtTim), BorderLayout.NORTH);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
-        JPanel body = new JPanel(new BorderLayout(8, 8));
-        body.add(north, BorderLayout.NORTH);
-        body.add(new JScrollPane(table), BorderLayout.CENTER);
+        table.setFillsViewportHeight(true);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setBorder(DialogUtils.createCardBorder(null, null));
+        tableScroll.getViewport().setBackground(Color.WHITE);
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(tableScroll, BorderLayout.CENTER);
+        body.add(createDetailsCard(), BorderLayout.SOUTH);
         add(body, BorderLayout.CENTER);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        actions.setOpaque(false);
+        JButton them = DialogUtils.createStyledButton("Thêm mới", DialogUtils.SUCCESS);
+        JButton sua = DialogUtils.createStyledButton("Cập nhật", DialogUtils.WARNING);
+        JButton xoa = DialogUtils.createStyledButton("Xóa", DialogUtils.DANGER);
+        JButton moi = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN);
+        actions.add(them); actions.add(sua); actions.add(xoa); actions.add(moi);
+        add(actions, BorderLayout.SOUTH);
         them.addActionListener(e -> luu(false));
         sua.addActionListener(e -> luu(true));
         xoa.addActionListener(e -> xoa());
         moi.addActionListener(e -> lamMoi());
-        tim.addActionListener(e -> napDanhSach(txtTim.getText()));
-        tatCa.addActionListener(e -> {
-            txtTim.setText("");
-            napDanhSach("");
-        });
+        txtTim.addActionListener(e -> napDanhSach(txtTim.getText()));
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && table.getSelectedRow() >= 0) {
                 int r = table.convertRowIndexToModel(table.getSelectedRow());
@@ -95,6 +67,29 @@ public class DayTroPanel extends JPanel {
         });
         napChuTro();
         napDanhSach("");
+    }
+
+    private JPanel createDetailsCard() {
+        JPanel card = new JPanel(new GridBagLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(DialogUtils.createCardBorder("Thông tin dãy trọ", DialogUtils.PRIMARY), BorderFactory.createEmptyBorder(8, 16, 12, 16)));
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(6, 8, 6, 12); g.fill = GridBagConstraints.HORIZONTAL;
+        addField(card, g, 0, "Tên dãy:", txtTen);
+        addField(card, g, 2, "Địa chỉ:", txtDiaChi);
+        addField(card, g, 4, "Chủ trọ:", cboChuTro);
+        txtTen.setPreferredSize(new Dimension(200, 36));
+        txtDiaChi.setPreferredSize(new Dimension(250, 36));
+        cboChuTro.setPreferredSize(new Dimension(280, 36));
+        return card;
+    }
+
+    private void addField(JPanel panel, GridBagConstraints base, int x, String label, Component field) {
+        GridBagConstraints g = (GridBagConstraints) base.clone();
+        g.gridx = x; g.gridy = 0; g.weightx = 0;
+        panel.add(DialogUtils.createFormLabel(label), g);
+        g.gridx = x + 1; g.weightx = 1;
+        panel.add(field, g);
     }
 
     private void napChuTro() {

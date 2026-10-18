@@ -23,7 +23,7 @@ public class TraCuuPanel extends JPanel {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
     private final TraCuuService service = new TraCuuService();
     private final NumberFormat tienFormat = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 

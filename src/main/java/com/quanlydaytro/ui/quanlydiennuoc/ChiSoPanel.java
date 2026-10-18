@@ -2,6 +2,7 @@ package com.quanlydaytro.ui.quanlydiennuoc;
 
 import com.quanlydaytro.model.*;
 import com.quanlydaytro.service.*;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -25,12 +26,16 @@ public class ChiSoPanel extends JPanel {
             return false;
         }
     };
-    private final JTable tbD = new JTable(dmD), tbN = new JTable(dmN);
+    private final JTable tbD = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(dmD), tbN = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(dmN);
     private final JTextField timD = new JTextField(15), timN = new JTextField(15);
 
     public ChiSoPanel() {
         setLayout(new BorderLayout(8, 8));
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        add(DialogUtils.createHeaderPanel("📊 GHI NHẬN CHỈ SỐ ĐIỆN & NƯỚC", null), BorderLayout.NORTH);
         JTabbedPane tabs = new JTabbedPane();
+        tabs.setFont(DialogUtils.HEADER_FONT);
         tabs.addTab("Chỉ số điện", taoTab(true));
         tabs.addTab("Chỉ số nước", taoTab(false));
         add(tabs, BorderLayout.CENTER);
@@ -40,12 +45,14 @@ public class ChiSoPanel extends JPanel {
 
     private JPanel taoTab(boolean isDien) {
         JPanel p = new JPanel(new BorderLayout(5, 5));
+        p.setBackground(DialogUtils.BG_CONTENT);
         JTable table = isDien ? tbD : tbN;
         JTextField search = isDien ? timD : timN;
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        DialogUtils.styleToolbar(top);
         top.add(new JLabel("Tìm mã chỉ số / mã phòng / kỳ:"));
         top.add(search);
-        JButton tim = new JButton("Tìm kiếm"), all = new JButton("Làm mới"), add = new JButton("Thêm"), edit = new JButton("Sửa"), del = new JButton("Xóa");
+        JButton tim = DialogUtils.createStyledButton("Tìm kiếm", DialogUtils.PRIMARY), all = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN), add = DialogUtils.createStyledButton("Thêm", DialogUtils.SUCCESS), edit = DialogUtils.createStyledButton("Sửa", DialogUtils.WARNING), del = DialogUtils.createStyledButton("Xóa", DialogUtils.DANGER);
         top.add(tim);
         top.add(all);
         top.add(add);

@@ -5,6 +5,7 @@ import com.quanlydaytro.enums.TrangThaiPhong;
 import com.quanlydaytro.model.DayTro;
 import com.quanlydaytro.model.Phong;
 import com.quanlydaytro.service.PhongService;
+import com.quanlydaytro.ui.dungchung.DialogUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -26,16 +27,17 @@ public class PhongPanel extends JPanel {
             return false;
         }
     };
-    private final JTable table = new JTable(model);
+    private final JTable table = com.quanlydaytro.ui.dungchung.DialogUtils.createStyledTable(model);
     private int maDangChon;
 
     public PhongPanel() {
         setLayout(new BorderLayout(8, 8));
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        JLabel title = new JLabel("QUẢN LÝ PHÒNG TRỌ");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
-        add(title, BorderLayout.NORTH);
+        setBackground(DialogUtils.BG_CONTENT);
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        add(DialogUtils.createHeaderPanel("🚪 QUẢN LÝ PHÒNG TRỌ", null), BorderLayout.NORTH);
         JPanel form = new JPanel(new GridBagLayout());
+        form.setBackground(Color.WHITE);
+        form.setBorder(BorderFactory.createCompoundBorder(DialogUtils.createCardBorder("Thông tin phòng", DialogUtils.PRIMARY), BorderFactory.createEmptyBorder(10, 14, 10, 14)));
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(4, 5, 4, 5);
         g.anchor = GridBagConstraints.WEST;
@@ -66,16 +68,18 @@ public class PhongPanel extends JPanel {
         form.add(cboDay, g);
         g.gridwidth = 1;
         g.fill = GridBagConstraints.NONE;
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton them = new JButton("Thêm"), sua = new JButton("Cập nhật"), xoa = new JButton("Xóa"), moi = new JButton("Làm mới");
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        buttons.setOpaque(false);
+        JButton them = DialogUtils.createStyledButton("Thêm", DialogUtils.SUCCESS), sua = DialogUtils.createStyledButton("Cập nhật", DialogUtils.WARNING), xoa = DialogUtils.createStyledButton("Xóa", DialogUtils.DANGER), moi = DialogUtils.createStyledButton("Làm mới", DialogUtils.GRAY_BTN);
         buttons.add(them);
         buttons.add(sua);
         buttons.add(xoa);
         buttons.add(moi);
-        JPanel search = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel search = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        DialogUtils.styleToolbar(search);
         search.add(new JLabel("Tìm theo mã, tên phòng, trạng thái hoặc dãy:"));
         search.add(txtTim);
-        JButton tim = new JButton("Tìm kiếm"), tatCa = new JButton("Tất cả");
+        JButton tim = DialogUtils.createStyledButton("Tìm kiếm", DialogUtils.PRIMARY), tatCa = DialogUtils.createStyledButton("Tất cả", DialogUtils.GRAY_BTN);
         search.add(tim);
         search.add(tatCa);
         JPanel north = new JPanel(new BorderLayout());
@@ -85,6 +89,7 @@ public class PhongPanel extends JPanel {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
         JPanel body = new JPanel(new BorderLayout(8, 8));
+        body.setOpaque(false);
         body.add(north, BorderLayout.NORTH);
         body.add(new JScrollPane(table), BorderLayout.CENTER);
         add(body, BorderLayout.CENTER);
