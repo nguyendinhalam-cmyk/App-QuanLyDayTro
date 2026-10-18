@@ -4,12 +4,16 @@ import com.quanlydaytro.ui.quanlytaikhoan.NhanVienPanel;
 import com.quanlydaytro.ui.quanlydaytro.ChuTroPanel;
 import com.quanlydaytro.ui.quanlydaytro.DayTroPanel;
 import com.quanlydaytro.ui.quanlyphong.PhongPanel;
+import com.quanlydaytro.ui.quanlydiennuoc.BangGiaPanel;
 import com.quanlydaytro.ui.quanlytaikhoan.TaiKhoanPanel;
 import com.quanlydaytro.util.QuanLyPhienDangNhap;
+
 import javax.swing.*;
 import java.awt.*;
 
-/** Khung chính; các chức năng quản trị được kiểm tra quyền trước khi mở. */
+/**
+ * Khung chính; các chức năng quản trị được kiểm tra quyền trước khi mở.
+ */
 public class TrangChinhFrame extends JFrame {
     private final JPanel noiDung = new JPanel(new BorderLayout());
 
@@ -48,6 +52,10 @@ public class TrangChinhFrame extends JFrame {
             JMenuItem phong = new JMenuItem("Quản lý phòng");
             phong.addActionListener(e -> hienThiPhong());
             heThong.add(phong);
+
+            JMenuItem bangGia = new JMenuItem("Quản lý giá điện, nước");
+            bangGia.addActionListener(e -> hienThiBangGia());
+            heThong.add(bangGia);
         }
         JMenuItem trangChu = new JMenuItem("Trang chủ");
         trangChu.addActionListener(e -> hienThiTrangChu());
@@ -116,6 +124,17 @@ public class TrangChinhFrame extends JFrame {
         }
         noiDung.removeAll();
         noiDung.add(new PhongPanel(), BorderLayout.CENTER);
+        noiDung.revalidate();
+        noiDung.repaint();
+    }
+
+    private void hienThiBangGia() {
+        if (!QuanLyPhienDangNhap.coVaiTro("Admin", "Manager")) {
+            JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này.");
+            return;
+        }
+        noiDung.removeAll();
+        noiDung.add(new BangGiaPanel(), BorderLayout.CENTER);
         noiDung.revalidate();
         noiDung.repaint();
     }
