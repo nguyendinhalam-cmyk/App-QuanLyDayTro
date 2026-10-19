@@ -81,53 +81,32 @@ public class HoaDonDAO extends AbstractJdbcDAO<HoaDon> {
     }
 
     /**
-     * Lập hóa đơn từ hợp đồng, chỉ số và đơn giá có hiệu lực trong tháng; mọi phép tính dùng BigDecimal.
+     * Lập hóa đơn thông qua Stored Procedure dbo.SP_LapHoaDon.
+     * Phần tính tiền điện/nước được thực hiện bằng các Function trong SQL Server.
      */
     public int lapHoaDon(int maHopDong, String thangNam, LocalDate hanThanhToan) throws SQLException {
-        String sql = "SELECT h.MaPhong,h.GiaThueThoaThuan, cd.ChiSoCu DienCu,cd.ChiSoMoi DienMoi, cn.ChiSoCu NuocCu,cn.ChiSoMoi NuocMoi, gd.DonGia GiaDien, gn.DonGia GiaNuoc " +
-                "FROM HOPDONG h LEFT JOIN CHISODIEN cd ON cd.MaPhong=h.MaPhong AND cd.ThangNam=? LEFT JOIN CHISONUOC cn ON cn.MaPhong=h.MaPhong AND cn.ThangNam=? " +
-                "OUTER APPLY (SELECT TOP 1 DonGia FROM BANGGIADIEN WHERE NgayApDung<=EOMONTH(CONVERT(date,'01/'+?,103)) ORDER BY NgayApDung DESC) gd " +
-                "OUTER APPLY (SELECT TOP 1 DonGia FROM BANGGIANUOC WHERE NgayApDung<=EOMONTH(CONVERT(date,'01/'+?,103)) ORDER BY NgayApDung DESC) gn " +
-                "WHERE h.MaHopDong=? AND h.TrangThai=N'HieuLuc' AND h.NgayBatDau<=EOMONTH(CONVERT(date,'01/'+?,103)) AND h.NgayKetThuc>=CONVERT(date,'01/'+?,103)";
-        BigDecimal tienPhong, tienDien = BigDecimal.ZERO, tienNuoc = BigDecimal.ZERO;
-        try (Connection c = DatabaseConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, thangNam);
-            ps.setString(2, thangNam);
-            ps.setString(3, thangNam);
-            ps.setString(4, thangNam);
-            ps.setInt(5, maHopDong);
-            ps.setString(6, thangNam);
-            ps.setString(7, thangNam);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) throw new SQLException("Không tìm thấy hợp đồng hiệu lực trong tháng đã chọn.");
-                tienPhong = rs.getBigDecimal("GiaThueThoaThuan");
-                Integer dc = (Integer) rs.getObject("DienCu"), dm = (Integer) rs.getObject("DienMoi"), nc = (Integer) rs.getObject("NuocCu"), nm = (Integer) rs.getObject("NuocMoi");
-                BigDecimal gd = rs.getBigDecimal("GiaDien"), gn = rs.getBigDecimal("GiaNuoc");
-                if (dc == null || dm == null)
-                    throw new SQLException("Chưa ghi đủ chỉ số điện cho phòng trong tháng " + thangNam + ".");
-                if (nc == null || nm == null)
-                    throw new SQLException("Chưa ghi đủ chỉ số nước cho phòng trong tháng " + thangNam + ".");
-                if (gd == null || gn == null)
-                    throw new SQLException("Chưa khai báo đơn giá điện/nước áp dụng trong tháng " + thangNam + ".");
-                tienDien = gd.multiply(BigDecimal.valueOf(dm - dc));
-                tienNuoc = gn.multiply(BigDecimal.valueOf(nm - nc));
-            }
-            BigDecimal tong = tienPhong.add(tienDien).add(tienNuoc);
-            String ins = "INSERT INTO HOADON(MaHopDong,ThangNam,TienPhong,TienDien,TienNuoc,TongTien,HanThanhToan,TrangThai) VALUES(?,?,?,?,?,?,?,N'ChuaThanhToan')";
-            try (PreparedStatement ps2 = c.prepareStatement(ins, Statement.RETURN_GENERATED_KEYS)) {
-                ps2.setInt(1, maHopDong);
-                ps2.setString(2, thangNam);
-                ps2.setBigDecimal(3, tienPhong);
-                ps2.setBigDecimal(4, tienDien);
-                ps2.setBigDecimal(5, tienNuoc);
-                ps2.setBigDecimal(6, tong);
-                ps2.setDate(7, Date.valueOf(hanThanhToan));
-                ps2.executeUpdate();
-                try (ResultSet keys = ps2.getGeneratedKeys()) {
-                    if (keys.next()) return keys.getInt(1);
+        String sql = "{call dbo.SP_LapHoaDon(?,?,?)}";
+        try (Connection c = DatabaseConnection.getConnection(); CallableStatement cs = c.prepareCall(sql)) {
+            cs.setInt(1, maHopDong);
+            cs.setString(2, thangNam);
+            cs.setDate(3, Date.valueOf(hanThanhToan));
+            boolean hasResult = cs.execute();
+            while (hasResult) {
+                try (ResultSet rs = cs.getResultSet()) {
+                    if (rs != null && rs.next()) {
+                        int id = rs.getInt("MaHoaDon");
+                        if (rs.wasNull() || id <= 0) {
+                            throw new SQLException("Stored Procedure không trả về mã hóa đơn hợp lệ.");
+                        }
+                        return id;
+                    }
                 }
+                hasResult = cs.getMoreResults();
             }
+        } catch (SQLException ex) {
+            throw new SQLException("Không thể lập hóa đơn: " + ex.getMessage(), ex.getSQLState(), ex.getErrorCode(), ex);
         }
-        throw new SQLException("Không lấy được mã hóa đơn vừa tạo.");
+        throw new SQLException("Stored Procedure không trả về mã hóa đơn vừa tạo.");
     }
+
 }

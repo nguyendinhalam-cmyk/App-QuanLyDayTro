@@ -37,86 +37,28 @@ public class ChuyenPhongDAO {
         return rows;
     }
 
+    /**
+     * Chuyển phòng thông qua transaction TX_ChuyenPhong trong SQL Server.
+     * Giữ nguyên hợp đồng mới có thời hạn một năm như luồng giao diện hiện tại.
+     */
     public void chuyenPhong(int maHopDong, int maPhongMoi, LocalDate ngayChuyen, BigDecimal giaThueMoi, BigDecimal tienCocMoi) throws SQLException {
+        if (maHopDong <= 0 || maPhongMoi <= 0)
+            throw new IllegalArgumentException("Vui lòng chọn hợp đồng và phòng mới.");
         if (ngayChuyen == null || giaThueMoi == null || giaThueMoi.signum() <= 0 || tienCocMoi == null || tienCocMoi.signum() <= 0)
             throw new IllegalArgumentException("Ngày chuyển, giá thuê và tiền cọc phải hợp lệ.");
-        try (Connection c = DatabaseConnection.getConnection()) {
-            c.setAutoCommit(false);
-            try {
-                int maPhongCu, maNT;
-                LocalDate ngayBatDau;
-                BigDecimal cocCu;
-                String lock = "SELECT MaPhong, MaNT, NgayBatDau, TienCoc FROM HOPDONG WITH (UPDLOCK, HOLDLOCK) WHERE MaHopDong=? AND TrangThai=N'HieuLuc'";
-                try (PreparedStatement ps = c.prepareStatement(lock)) {
-                    ps.setInt(1, maHopDong);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (!rs.next()) throw new SQLException("Hợp đồng không tồn tại hoặc đã kết thúc.");
-                        maPhongCu = rs.getInt("MaPhong");
-                        maNT = rs.getInt("MaNT");
-                        ngayBatDau = rs.getDate("NgayBatDau").toLocalDate();
-                        cocCu = rs.getBigDecimal("TienCoc");
-                    }
-                }
-                if (maPhongCu == maPhongMoi) throw new SQLException("Phòng mới phải khác phòng hiện tại.");
-                if (!ngayChuyen.isAfter(ngayBatDau))
-                    throw new SQLException("Ngày chuyển phải sau ngày bắt đầu hợp đồng hiện tại theo ràng buộc cơ sở dữ liệu.");
-                try (PreparedStatement ps = c.prepareStatement("SELECT TrangThai FROM PHONG WITH (UPDLOCK,HOLDLOCK) WHERE MaPhong=?")) {
-                    ps.setInt(1, maPhongMoi);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (!rs.next() || !"Trong".equals(rs.getString(1)))
-                            throw new SQLException("Phòng mới không tồn tại hoặc không còn trống.");
-                    }
-                }
-                String debt = "SELECT COUNT(*) FROM HOADON h WHERE h.MaHopDong=? AND h.TrangThai<>N'HoanTat'";
-                try (PreparedStatement ps = c.prepareStatement(debt)) {
-                    ps.setInt(1, maHopDong);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        rs.next();
-                        if (rs.getInt(1) > 0)
-                            throw new SQLException("Hợp đồng còn hóa đơn chưa thanh toán đủ. Vui lòng quyết toán công nợ trước khi chuyển phòng.");
-                    }
-                }
-                try (PreparedStatement ps = c.prepareStatement("UPDATE HOPDONG SET NgayKetThuc=?, TrangThai=N'DaDong' WHERE MaHopDong=? AND TrangThai=N'HieuLuc'")) {
-                    ps.setDate(1, Date.valueOf(ngayChuyen));
-                    ps.setInt(2, maHopDong);
-                    if (ps.executeUpdate() != 1) throw new SQLException("Không thể cập nhật hợp đồng cũ.");
-                }
-                try (PreparedStatement ps = c.prepareStatement("UPDATE PHONG SET TrangThai=N'Trong', SoNguoiO=0 WHERE MaPhong=? AND TrangThai=N'DangThue'")) {
-                    ps.setInt(1, maPhongCu);
-                    if (ps.executeUpdate() != 1)
-                        throw new SQLException("Trạng thái phòng cũ không hợp lệ; giao dịch đã hủy.");
-                }
-                try (PreparedStatement ps = c.prepareStatement("UPDATE PHONG SET TrangThai=N'DangThue', SoNguoiO=1 WHERE MaPhong=? AND TrangThai=N'Trong'")) {
-                    ps.setInt(1, maPhongMoi);
-                    if (ps.executeUpdate() != 1)
-                        throw new SQLException("Phòng mới vừa được người khác đặt; giao dịch đã hủy.");
-                }
-                String insert = "INSERT INTO HOPDONG(MaPhong,MaNT,NgayBatDau,NgayKetThuc,GiaThueThoaThuan,TienCoc,TrangThai) VALUES(?,?,?,?,?,?,N'HieuLuc')";
-                try (PreparedStatement ps = c.prepareStatement(insert)) {
-                    ps.setInt(1, maPhongMoi);
-                    ps.setInt(2, maNT);
-                    ps.setDate(3, Date.valueOf(ngayChuyen));
-                    ps.setDate(4, Date.valueOf(ngayChuyen.plusYears(1)));
-                    ps.setBigDecimal(5, giaThueMoi);
-                    ps.setBigDecimal(6, tienCocMoi);
-                    ps.executeUpdate();
-                }
-                c.commit();
-            } catch (Exception ex) {
-                try {
-                    c.rollback();
-                } catch (SQLException rollbackEx) {
-                    ex.addSuppressed(rollbackEx);
-                }
-                if (ex instanceof SQLException se) throw se;
-                if (ex instanceof RuntimeException re) throw re;
-                throw new SQLException("Không thể chuyển phòng.", ex);
-            } finally {
-                try {
-                    c.setAutoCommit(true);
-                } catch (SQLException ignored) {
-                }
-            }
+
+        String sql = "{call dbo.TX_ChuyenPhong(?,?,?,?,?,?)}";
+        try (Connection c = DatabaseConnection.getConnection(); CallableStatement cs = c.prepareCall(sql)) {
+            cs.setInt(1, maHopDong);
+            cs.setInt(2, maPhongMoi);
+            cs.setDate(3, Date.valueOf(ngayChuyen));
+            cs.setDate(4, Date.valueOf(ngayChuyen.plusYears(1)));
+            cs.setBigDecimal(5, giaThueMoi);
+            cs.setBigDecimal(6, tienCocMoi);
+            cs.execute();
+        } catch (SQLException ex) {
+            throw new SQLException("Không thể chuyển phòng: " + ex.getMessage(), ex.getSQLState(), ex.getErrorCode(), ex);
         }
     }
+
 }

@@ -55,11 +55,26 @@ public class ThanhToanDAO extends AbstractJdbcDAO<ThanhToan> {
     }
 
     public BigDecimal daThanhToan(int maHoaDon) throws SQLException {
-        try (Connection c = DatabaseConnection.getConnection(); PreparedStatement ps = c.prepareStatement("SELECT COALESCE(SUM(SoTienTra),0) FROM THANHTOAN WHERE MaHoaDon=?")) {
+        String sql = "SELECT dbo.FN_TongTienDaThanhToan(?) AS DaThanhToan";
+        try (Connection c = DatabaseConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, maHoaDon);
             try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getBigDecimal(1);
+                if (!rs.next()) throw new SQLException("Không tính được tổng tiền đã thanh toán.");
+                return rs.getBigDecimal("DaThanhToan");
+            }
+        }
+    }
+
+    public BigDecimal conLaiTheoFunction(int maHoaDon) throws SQLException {
+        String sql = "SELECT dbo.FN_TinhTienConLai(?) AS ConLai, " +
+                "CASE WHEN EXISTS (SELECT 1 FROM HOADON WHERE MaHoaDon=?) THEN 1 ELSE 0 END AS TonTai";
+        try (Connection c = DatabaseConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, maHoaDon);
+            ps.setInt(2, maHoaDon);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new SQLException("Không tính được số tiền còn lại.");
+                if (rs.getInt("TonTai") != 1) throw new SQLException("Không tìm thấy hóa đơn " + maHoaDon);
+                return rs.getBigDecimal("ConLai");
             }
         }
     }
@@ -74,58 +89,34 @@ public class ThanhToanDAO extends AbstractJdbcDAO<ThanhToan> {
         }
     }
 
+    /**
+     * Ghi nhận thanh toán bằng transaction phía SQL Server.
+     * TX_ThanhToanHoaDon khóa hóa đơn, kiểm tra công nợ và rollback nếu có lỗi.
+     */
     public int ghiNhanVaCapNhatTrangThai(ThanhToan e) throws SQLException {
-        try (Connection c = DatabaseConnection.getConnection()) {
-            c.setAutoCommit(false);
-            try {
-                BigDecimal tong;
-                try (PreparedStatement ps = c.prepareStatement("SELECT TongTien FROM HOADON WITH (UPDLOCK, ROWLOCK) WHERE MaHoaDon=?")) {
-                    ps.setInt(1, e.getMaHoaDon());
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (!rs.next()) throw new SQLException("Hóa đơn không tồn tại.");
-                        tong = rs.getBigDecimal(1);
+        String sql = "{call dbo.TX_ThanhToanHoaDon(?,?,?)}";
+        try (Connection c = DatabaseConnection.getConnection(); CallableStatement cs = c.prepareCall(sql)) {
+            cs.setInt(1, e.getMaHoaDon());
+            cs.setBigDecimal(2, e.getSoTienTra());
+            if (e.getGhiChu() == null || e.getGhiChu().isBlank()) cs.setNull(3, Types.NVARCHAR);
+            else cs.setNString(3, e.getGhiChu());
+
+            boolean hasResult = cs.execute();
+            while (hasResult) {
+                try (ResultSet rs = cs.getResultSet()) {
+                    if (rs != null && rs.next()) {
+                        int id = rs.getInt("MaThanhToan");
+                        if (rs.wasNull() || id <= 0)
+                            throw new SQLException("Transaction không trả về mã thanh toán hợp lệ.");
+                        return id;
                     }
                 }
-                BigDecimal da;
-                try (PreparedStatement ps = c.prepareStatement("SELECT COALESCE(SUM(SoTienTra),0) FROM THANHTOAN WHERE MaHoaDon=?")) {
-                    ps.setInt(1, e.getMaHoaDon());
-                    try (ResultSet rs = ps.executeQuery()) {
-                        rs.next();
-                        da = rs.getBigDecimal(1);
-                    }
-                }
-                if (e.getSoTienTra().compareTo(tong.subtract(da)) > 0)
-                    throw new SQLException("Số tiền trả vượt quá công nợ còn lại: " + tong.subtract(da));
-                int id;
-                try (PreparedStatement ps = c.prepareStatement("INSERT INTO THANHTOAN(MaHoaDon,NgayThanhToan,SoTienTra,GhiChu) VALUES(?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
-                    ps.setInt(1, e.getMaHoaDon());
-                    if (e.getNgayThanhToan() == null)
-                        ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
-                    else ps.setTimestamp(2, Timestamp.valueOf(e.getNgayThanhToan()));
-                    ps.setBigDecimal(3, e.getSoTienTra());
-                    ps.setString(4, e.getGhiChu());
-                    ps.executeUpdate();
-                    try (ResultSet rs = ps.getGeneratedKeys()) {
-                        rs.next();
-                        id = rs.getInt(1);
-                    }
-                }
-                BigDecimal daMoi = da.add(e.getSoTienTra());
-                String trangThai = daMoi.compareTo(tong) >= 0 ? "HoanTat" : (daMoi.signum() > 0 ? "DangThanhToan" : "ChuaThanhToan");
-                try (PreparedStatement ps = c.prepareStatement("UPDATE HOADON SET TrangThai=? WHERE MaHoaDon=?")) {
-                    ps.setString(1, trangThai);
-                    ps.setInt(2, e.getMaHoaDon());
-                    ps.executeUpdate();
-                }
-                c.commit();
-                return id;
-            } catch (Exception ex) {
-                c.rollback();
-                if (ex instanceof SQLException) throw (SQLException) ex;
-                throw new SQLException(ex);
-            } finally {
-                c.setAutoCommit(true);
+                hasResult = cs.getMoreResults();
             }
+        } catch (SQLException ex) {
+            throw new SQLException("Không thể ghi nhận thanh toán: " + ex.getMessage(), ex.getSQLState(), ex.getErrorCode(), ex);
         }
+        throw new SQLException("Transaction không trả về mã thanh toán vừa tạo.");
     }
+
 }

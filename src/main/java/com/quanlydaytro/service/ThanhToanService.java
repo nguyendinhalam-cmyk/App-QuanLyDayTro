@@ -51,6 +51,6 @@ public class ThanhToanService {
 
     public BigDecimal conNo(int maHoaDon) throws SQLException {
         if (maHoaDon <= 0) throw new IllegalArgumentException("Mã hóa đơn không hợp lệ");
-        return dao.tongHoaDon(maHoaDon).subtract(dao.daThanhToan(maHoaDon)).max(BigDecimal.ZERO);
+        return dao.conLaiTheoFunction(maHoaDon).max(BigDecimal.ZERO);
     }
 }
