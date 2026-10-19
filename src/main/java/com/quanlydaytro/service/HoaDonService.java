@@ -66,4 +66,15 @@ public class HoaDonService {
         if (ma <= 0) throw new IllegalArgumentException("Mã hóa đơn không hợp lệ.");
         return dao.delete(ma);
     }
+
+    public java.math.BigDecimal tinhTienDuKien(int maHopDong, int maPhong, String thangNam) throws SQLException {
+        if (maHopDong <= 0 || maPhong <= 0) throw new IllegalArgumentException("Hợp đồng/phòng không hợp lệ.");
+        if (thangNam == null) throw new IllegalArgumentException("Vui lòng nhập tháng/năm theo định dạng MM/yyyy.");
+        try {
+            YearMonth.parse(thangNam, DateTimeFormatter.ofPattern("MM/uuuu"));
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Tháng/năm không hợp lệ; nhập theo định dạng MM/yyyy.");
+        }
+        return dao.tinhTienDuKien(maHopDong, maPhong, thangNam);
+    }
 }

@@ -45,55 +45,49 @@ public class TraPhongDAO {
      * Chốt trả phòng trong một transaction; không tự xóa hóa đơn hay lịch sử thanh toán.
      */
     public void quyetToan(int maHopDong, BigDecimal tienKhauTruCoc, String ghiChu) throws SQLException {
+        if (maHopDong <= 0) throw new SQLException("Mã hợp đồng không hợp lệ.");
         if (tienKhauTruCoc == null || tienKhauTruCoc.signum() < 0)
             throw new SQLException("Tiền khấu trừ cọc không hợp lệ.");
-        try (Connection c = moKetNoi()) {
-            c.setAutoCommit(false);
-            try {
-                int maPhong;
-                BigDecimal tienCoc;
-                String trangThai;
-                try (PreparedStatement ps = c.prepareStatement("SELECT MaPhong,TienCoc,TrangThai FROM HOPDONG WITH (UPDLOCK,ROWLOCK) WHERE MaHopDong=?")) {
-                    ps.setInt(1, maHopDong);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (!rs.next()) throw new SQLException("Hợp đồng không tồn tại.");
-                        maPhong = rs.getInt("MaPhong");
-                        tienCoc = rs.getBigDecimal("TienCoc");
-                        trangThai = rs.getString("TrangThai");
-                    }
-                }
-                if (!"HieuLuc".equals(trangThai)) throw new SQLException("Hợp đồng này đã kết thúc trước đó.");
-                if (tienKhauTruCoc.compareTo(tienCoc) > 0)
-                    throw new SQLException("Tiền khấu trừ không được lớn hơn tiền cọc.");
-                String sqlNo = "SELECT COALESCE(SUM(h.TongTien),0)-COALESCE((SELECT SUM(t.SoTienTra) FROM HOADON hx JOIN THANHTOAN t ON t.MaHoaDon=hx.MaHoaDon WHERE hx.MaHopDong=?),0) CongNo FROM HOADON h WHERE h.MaHopDong=?";
-                BigDecimal congNo;
-                try (PreparedStatement ps = c.prepareStatement(sqlNo)) {
-                    ps.setInt(1, maHopDong);
-                    ps.setInt(2, maHopDong);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        rs.next();
-                        congNo = rs.getBigDecimal("CongNo");
-                    }
-                }
-                if (congNo.signum() > 0)
-                    throw new SQLException("Chưa thể trả phòng: hợp đồng còn công nợ " + congNo + " đồng. Hãy xử lý hóa đơn trước.");
-                try (PreparedStatement ps = c.prepareStatement("UPDATE HOPDONG SET TrangThai=N'DaDong' WHERE MaHopDong=? AND TrangThai=N'HieuLuc'")) {
-                    ps.setInt(1, maHopDong);
-                    if (ps.executeUpdate() != 1) throw new SQLException("Không thể cập nhật trạng thái hợp đồng.");
-                }
-                try (PreparedStatement ps = c.prepareStatement("UPDATE PHONG SET TrangThai=N'Trong',SoNguoiO=0 WHERE MaPhong=? AND TrangThai=N'DangThue'")) {
-                    ps.setInt(1, maPhong);
-                    if (ps.executeUpdate() != 1)
-                        throw new SQLException("Phòng không ở trạng thái ĐangThue; đã hủy quyết toán.");
-                }
-                c.commit();
-            } catch (Exception ex) {
-                c.rollback();
-                if (ex instanceof SQLException) throw (SQLException) ex;
-                throw new SQLException("Lỗi quyết toán trả phòng.", ex);
-            } finally {
-                c.setAutoCommit(true);
+
+        // Kiểm tra khoản khấu trừ theo tiền cọc trước khi gọi transaction phía SQL Server.
+        BigDecimal tienCoc;
+        try (Connection c = moKetNoi();
+             PreparedStatement ps = c.prepareStatement("SELECT TienCoc FROM HOPDONG WHERE MaHopDong=? AND TrangThai=N'HieuLuc'")) {
+            ps.setInt(1, maHopDong);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new SQLException("Hợp đồng không tồn tại hoặc đã kết thúc.");
+                tienCoc = rs.getBigDecimal("TienCoc");
             }
+        }
+        if (tienKhauTruCoc.compareTo(tienCoc) > 0)
+            throw new SQLException("Tiền khấu trừ không được lớn hơn tiền cọc.");
+
+        // TX_TraPhong tự kiểm tra công nợ, khóa hợp đồng và cập nhật HOPDONG/PHONG trong cùng transaction.
+        String sql = "{call dbo.TX_TraPhong(?)}";
+        try (Connection c = moKetNoi(); CallableStatement cs = c.prepareCall(sql)) {
+            cs.setInt(1, maHopDong);
+            boolean hasResult = cs.execute();
+            boolean confirmed = false;
+            while (hasResult) {
+                try (ResultSet rs = cs.getResultSet()) {
+                    if (rs != null && rs.next() && hasColumn(rs, "MaHopDong")) confirmed = true;
+                }
+                hasResult = cs.getMoreResults();
+            }
+            if (!confirmed) throw new SQLException("Transaction trả phòng không xác nhận kết quả.");
+        } catch (SQLException ex) {
+            throw new SQLException("Không thể quyết toán trả phòng: " + ex.getMessage(), ex.getSQLState(), ex.getErrorCode(), ex);
+        }
+        // Lưu ý: schema hiện tại chưa có bảng lưu chi tiết khấu trừ/hoàn cọc; ghiChu và khoản khấu trừ
+        // chỉ được kiểm tra ở tầng nghiệp vụ, không được ghi thành một bút toán riêng.
+    }
+
+    private boolean hasColumn(ResultSet rs, String column) {
+        try {
+            rs.findColumn(column);
+            return true;
+        } catch (SQLException ex) {
+            return false;
         }
     }
 }

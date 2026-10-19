@@ -25,13 +25,23 @@ public class ChuyenPhongDAO {
     }
 
     public List<Object[]> danhSachPhongTrong(int maPhongHienTai) throws SQLException {
-        String sql = "SELECT MaPhong, TenPhong, MaDay, GiaThueHienTai FROM PHONG WHERE TrangThai=N'Trong' AND MaPhong<>? ORDER BY MaDay, TenPhong";
+        // SP_TimPhongTrong là nguồn truy vấn chuẩn; lọc phòng hiện tại ở Java sau khi nhận kết quả.
+        String sql = "{call dbo.SP_TimPhongTrong(?,?)}";
         List<Object[]> rows = new ArrayList<>();
-        try (Connection c = DatabaseConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, maPhongHienTai);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next())
-                    rows.add(new Object[]{rs.getInt("MaPhong"), rs.getString("TenPhong"), rs.getInt("MaDay"), rs.getBigDecimal("GiaThueHienTai")});
+        try (Connection c = DatabaseConnection.getConnection(); CallableStatement cs = c.prepareCall(sql)) {
+            cs.setNull(1, Types.INTEGER);
+            cs.setNull(2, Types.NVARCHAR);
+            boolean hasResult = cs.execute();
+            while (hasResult) {
+                try (ResultSet rs = cs.getResultSet()) {
+                    if (rs != null) while (rs.next()) {
+                        int maPhong = rs.getInt("MaPhong");
+                        if (maPhong != maPhongHienTai) {
+                            rows.add(new Object[]{maPhong, rs.getString("TenPhong"), rs.getInt("MaDay"), rs.getBigDecimal("GiaThueHienTai")});
+                        }
+                    }
+                }
+                hasResult = cs.getMoreResults();
             }
         }
         return rows;

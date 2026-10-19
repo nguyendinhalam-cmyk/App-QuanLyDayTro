@@ -52,7 +52,7 @@ public class HopDongService {
 
     public int them(HopDong h) throws SQLException {
         kiemTra(h, 0);
-        return dao.insert(h);
+        return dao.taoHopDongBangTransaction(h);
     }
 
     public boolean capNhat(int ma, HopDong h) throws SQLException {

@@ -108,4 +108,32 @@ public class HopDongDAO extends AbstractJdbcDAO<HopDong> {
         }
         return out;
     }
+
+    /**
+     * Tạo hợp đồng qua transaction phía SQL Server để khóa/kiểm tra phòng và cập nhật trạng thái nguyên tử.
+     */
+    public int taoHopDongBangTransaction(HopDong h) throws SQLException {
+        String sql = "{call dbo.TX_TaoHopDong(?,?,?,?,?,?)}";
+        try (Connection c = DatabaseConnection.getConnection(); CallableStatement cs = c.prepareCall(sql)) {
+            cs.setInt(1, h.getMaPhong());
+            cs.setInt(2, h.getMaNguoiThue());
+            cs.setDate(3, Date.valueOf(h.getNgayBatDau()));
+            cs.setDate(4, Date.valueOf(h.getNgayKetThuc()));
+            cs.setBigDecimal(5, h.getGiaThueThoaThuan());
+            cs.setBigDecimal(6, h.getTienCoc());
+            boolean hasResult = cs.execute();
+            while (hasResult) {
+                try (ResultSet rs = cs.getResultSet()) {
+                    if (rs != null && rs.next()) {
+                        int id = rs.getInt("MaHopDong");
+                        if (!rs.wasNull() && id > 0) return id;
+                    }
+                }
+                hasResult = cs.getMoreResults();
+            }
+        } catch (SQLException ex) {
+            throw new SQLException("Không thể tạo hợp đồng: " + ex.getMessage(), ex.getSQLState(), ex.getErrorCode(), ex);
+        }
+        throw new SQLException("Transaction không trả về mã hợp đồng vừa tạo.");
+    }
 }

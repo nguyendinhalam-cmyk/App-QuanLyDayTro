@@ -14,17 +14,15 @@ public class BaoCaoDAO {
     }
 
     public List<Object[]> layDoanhThu(String tuThang, String denThang) throws SQLException {
-        String sql = "SELECT h.ThangNam, COALESCE(SUM(t.SoTienTra),0) AS DaThu, " +
-                "COALESCE(SUM(h.TongTien),0) AS TongHoaDon, " +
-                "COALESCE(SUM(h.TongTien),0)-COALESCE(SUM(p.DaTra),0) AS ConNo " +
-                "FROM HOADON h LEFT JOIN (SELECT MaHoaDon,SUM(SoTienTra) DaTra FROM THANHTOAN GROUP BY MaHoaDon) p ON p.MaHoaDon=h.MaHoaDon " +
-                "LEFT JOIN THANHTOAN t ON t.MaHoaDon=h.MaHoaDon " +
-                "WHERE TRY_CONVERT(date,'01/'+h.ThangNam,103) BETWEEN TRY_CONVERT(date,'01/'+?,103) AND EOMONTH(TRY_CONVERT(date,'01/'+?,103)) " +
-                "GROUP BY h.ThangNam ORDER BY TRY_CONVERT(date,'01/'+h.ThangNam,103)";
-        // Tính tiền đã thu riêng theo hóa đơn, tránh nhân tổng thanh toán khi join.
-        sql = "SELECT h.ThangNam, SUM(COALESCE(x.DaThu,0)) DaThu, SUM(h.TongTien) TongHoaDon, SUM(CASE WHEN h.TongTien-COALESCE(x.DaThu,0)>0 THEN h.TongTien-COALESCE(x.DaThu,0) ELSE 0 END) ConNo " +
-                "FROM HOADON h LEFT JOIN (SELECT MaHoaDon,SUM(SoTienTra) DaThu FROM THANHTOAN GROUP BY MaHoaDon) x ON x.MaHoaDon=h.MaHoaDon " +
-                "WHERE TRY_CONVERT(date,'01/'+h.ThangNam,103) BETWEEN TRY_CONVERT(date,'01/'+?,103) AND EOMONTH(TRY_CONVERT(date,'01/'+?,103)) " +
+        // Dùng trực tiếp các Function của CSDL để tính tổng đã thu và số tiền còn lại theo từng hóa đơn.
+        String sql = "SELECT h.ThangNam, SUM(COALESCE(f.DaThu,0)) AS DaThu, " +
+                "SUM(h.TongTien) AS TongHoaDon, " +
+                "SUM(CASE WHEN COALESCE(f.ConLai,0)>0 THEN f.ConLai ELSE 0 END) AS ConNo " +
+                "FROM HOADON h " +
+                "OUTER APPLY (SELECT dbo.FN_TongTienDaThanhToan(h.MaHoaDon) AS DaThu, " +
+                "dbo.FN_TinhTienConLai(h.MaHoaDon) AS ConLai) f " +
+                "WHERE TRY_CONVERT(date,'01/'+h.ThangNam,103) BETWEEN TRY_CONVERT(date,'01/'+?,103) " +
+                "AND EOMONTH(TRY_CONVERT(date,'01/'+?,103)) " +
                 "GROUP BY h.ThangNam ORDER BY TRY_CONVERT(date,'01/'+h.ThangNam,103)";
         List<Object[]> rows = new ArrayList<>();
         try (Connection c = moKetNoi(); PreparedStatement ps = c.prepareStatement(sql)) {
@@ -76,6 +74,33 @@ public class BaoCaoDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next())
                     rows.add(new Object[]{rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getBigDecimal(5), rs.getBigDecimal(6), rs.getBigDecimal(7), rs.getString(8)});
+            }
+        }
+        return rows;
+    }
+
+    /**
+     * Báo cáo doanh thu theo dãy trọ, gọi trực tiếp dbo.SP_ThongKeDoanhThu.
+     */
+    public List<Object[]> layDoanhThuTheoDay(java.time.LocalDate tuNgay, java.time.LocalDate denNgay, Integer maDay) throws SQLException {
+        if (tuNgay == null || denNgay == null) throw new IllegalArgumentException("Vui lòng chọn khoảng ngày báo cáo.");
+        if (tuNgay.isAfter(denNgay)) throw new IllegalArgumentException("Từ ngày không được sau đến ngày.");
+        String sql = "{call dbo.SP_ThongKeDoanhThu(?,?,?)}";
+        List<Object[]> rows = new ArrayList<>();
+        try (Connection c = moKetNoi(); CallableStatement cs = c.prepareCall(sql)) {
+            cs.setDate(1, java.sql.Date.valueOf(tuNgay));
+            cs.setDate(2, java.sql.Date.valueOf(denNgay));
+            if (maDay == null || maDay <= 0) cs.setNull(3, Types.INTEGER);
+            else cs.setInt(3, maDay);
+            boolean hasResult = cs.execute();
+            while (hasResult) {
+                try (ResultSet rs = cs.getResultSet()) {
+                    if (rs != null) while (rs.next()) {
+                        rows.add(new Object[]{rs.getInt("MaDay"), rs.getString("TenDay"), rs.getInt("SoHoaDon"),
+                                rs.getBigDecimal("TongTienHoaDon"), rs.getBigDecimal("TongDoanhThuThucThu")});
+                    }
+                }
+                hasResult = cs.getMoreResults();
             }
         }
         return rows;

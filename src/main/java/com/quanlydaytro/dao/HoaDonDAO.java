@@ -109,4 +109,21 @@ public class HoaDonDAO extends AbstractJdbcDAO<HoaDon> {
         throw new SQLException("Stored Procedure không trả về mã hóa đơn vừa tạo.");
     }
 
+
+    /**
+     * Gọi scalar function dbo.FN_TinhTienHoaDon để xem trước tổng tiền theo hợp đồng/phòng/kỳ.
+     */
+    public BigDecimal tinhTienDuKien(int maHopDong, int maPhong, String thangNam) throws SQLException {
+        String sql = "SELECT dbo.FN_TinhTienHoaDon(?,?,?) AS TongTien";
+        try (Connection c = DatabaseConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, maHopDong);
+            ps.setInt(2, maPhong);
+            ps.setString(3, thangNam);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new SQLException("Function không trả về tổng tiền dự kiến.");
+                BigDecimal value = rs.getBigDecimal("TongTien");
+                return value == null ? BigDecimal.ZERO : value;
+            }
+        }
+    }
 }

@@ -51,4 +51,10 @@ public class BaoCaoService {
         kiemTraKy(tu, den);
         return dao.layTieuThu(tu, den);
     }
+
+    public List<Object[]> doanhThuTheoDay(java.time.LocalDate tuNgay, java.time.LocalDate denNgay, Integer maDay) throws SQLException {
+        if (tuNgay == null || denNgay == null) throw new IllegalArgumentException("Vui lòng chọn khoảng ngày báo cáo.");
+        if (tuNgay.isAfter(denNgay)) throw new IllegalArgumentException("Từ ngày không được sau đến ngày.");
+        return dao.layDoanhThuTheoDay(tuNgay, denNgay, maDay);
+    }
 }

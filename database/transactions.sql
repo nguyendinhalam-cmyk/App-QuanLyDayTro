@@ -166,7 +166,7 @@ BEGIN
         -- Tính tiền
         SET @TienDien = dbo.FN_TinhTienDien(@MaPhong, @ThangNam);
         SET @TienNuoc = dbo.FN_TinhTienNuoc(@MaPhong, @ThangNam);
-        SET @TongTien = @TienPhong + @TienDien + @TienNuoc;
+        SET @TongTien = dbo.FN_TinhTienHoaDon(@MaHopDong, @MaPhong, @ThangNam);
 
         -- Lập hóa đơn
         INSERT INTO HOADON(MaHopDong,ThangNam,TienPhong,TienDien,TienNuoc,TongTien,HanThanhToan,TrangThai)
