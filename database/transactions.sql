@@ -242,6 +242,7 @@ BEGIN
         -- Ghi nhận thanh toán
         INSERT INTO THANHTOAN(MaHoaDon,NgayThanhToan,SoTienTra,GhiChu)
         VALUES(@MaHoaDon,GETDATE(),@SoTienTra,@GhiChu);
+        DECLARE @MaThanhToan INT = CONVERT(INT, SCOPE_IDENTITY());
 
         SET @DaThanhToan = @DaThanhToan + @SoTienTra;
         SET @ConLai = @TongTien - @DaThanhToan;
@@ -263,6 +264,7 @@ BEGIN
         COMMIT;
 
         SELECT
+            @MaThanhToan AS MaThanhToan,
             @MaHoaDon AS MaHoaDon,
             @DaThanhToan AS DaThanhToan,
             @ConLai AS ConLai;
@@ -401,10 +403,26 @@ BEGIN
             THROW 50043, N'Phòng mới hiện không trống.', 1;
         END;
 
-        -- Kiểm tra ngày
+        -- Ngày chuyển phải sau ngày bắt đầu của hợp đồng hiện tại.
+        IF EXISTS (SELECT 1 FROM HOPDONG WHERE MaHopDong = @MaHopDongCu AND @NgayBatDauMoi <= NgayBatDau)
+        BEGIN
+            THROW 50044, N'Ngày chuyển phải sau ngày bắt đầu hợp đồng hiện tại.', 1;
+        END;
         IF @NgayKetThucMoi <= @NgayBatDauMoi
         BEGIN
-            THROW 50044, N'Ngày kết thúc phải sau ngày bắt đầu.', 1;
+            THROW 50047, N'Ngày kết thúc hợp đồng mới phải sau ngày bắt đầu.', 1;
+        END;
+
+        -- Không chuyển phòng khi hợp đồng cũ còn hóa đơn chưa thanh toán đủ.
+        IF EXISTS (
+            SELECT 1
+            FROM HOADON HD
+            OUTER APPLY (SELECT SUM(TT.SoTienTra) AS DaTra FROM THANHTOAN TT WHERE TT.MaHoaDon = HD.MaHoaDon) X
+            WHERE HD.MaHopDong = @MaHopDongCu
+              AND HD.TongTien > ISNULL(X.DaTra, 0)
+        )
+        BEGIN
+            THROW 50048, N'Hợp đồng còn hóa đơn chưa thanh toán đủ. Vui lòng xử lý công nợ trước khi chuyển phòng.', 1;
         END;
 
         -- Kiểm tra giá
@@ -420,7 +438,8 @@ BEGIN
 
         -- 1. Đóng hợp đồng cũ
         UPDATE HOPDONG
-        SET TrangThai = N'DaDong'
+        SET NgayKetThuc = @NgayBatDauMoi,
+            TrangThai = N'DaDong'
         WHERE MaHopDong = @MaHopDongCu;
 
         -- 2. Phòng cũ trở thành trống

@@ -112,7 +112,28 @@ BEGIN
             THROW 50002, N'Hóa đơn tháng này đã tồn tại.', 1;
         END;
 
-        -- 4. Tính toán tiền điện, tiền nước từ hàm Scalar Function
+        -- 4. Kiểm tra kỳ hóa đơn và dữ liệu đầu vào trước khi tính tiền
+        IF TRY_CONVERT(DATE, '01/' + @ThangNam, 103) IS NULL
+            THROW 50003, N'Tháng/năm không hợp lệ. Định dạng yêu cầu MM/yyyy.', 1;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM HOPDONG
+            WHERE MaHopDong = @MaHopDong
+              AND TrangThai = N'HieuLuc'
+              AND NgayBatDau <= EOMONTH(TRY_CONVERT(DATE, '01/' + @ThangNam, 103))
+              AND NgayKetThuc >= TRY_CONVERT(DATE, '01/' + @ThangNam, 103)
+        )
+            THROW 50008, N'Kỳ hóa đơn nằm ngoài thời hạn hợp đồng.', 1;
+
+        IF NOT EXISTS (SELECT 1 FROM CHISODIEN WHERE MaPhong = @MaPhong AND ThangNam = @ThangNam)
+            THROW 50004, N'Chưa ghi chỉ số điện cho phòng trong tháng này.', 1;
+        IF NOT EXISTS (SELECT 1 FROM CHISONUOC WHERE MaPhong = @MaPhong AND ThangNam = @ThangNam)
+            THROW 50005, N'Chưa ghi chỉ số nước cho phòng trong tháng này.', 1;
+        IF NOT EXISTS (SELECT 1 FROM BANGGIADIEN WHERE NgayApDung <= EOMONTH(TRY_CONVERT(DATE, '01/' + @ThangNam, 103)))
+            THROW 50006, N'Chưa có đơn giá điện áp dụng trong tháng này.', 1;
+        IF NOT EXISTS (SELECT 1 FROM BANGGIANUOC WHERE NgayApDung <= EOMONTH(TRY_CONVERT(DATE, '01/' + @ThangNam, 103)))
+            THROW 50007, N'Chưa có đơn giá nước áp dụng trong tháng này.', 1;
+
         SET @TienDien = ISNULL(dbo.FN_TinhTienDien(@MaPhong, @ThangNam), 0);
         SET @TienNuoc = ISNULL(dbo.FN_TinhTienNuoc(@MaPhong, @ThangNam), 0);
 
